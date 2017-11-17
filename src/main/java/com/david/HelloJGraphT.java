@@ -6,6 +6,7 @@ import com.david.parser.Visitor;
 import guru.nidi.graphviz.attribute.RankDir;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
+import guru.nidi.graphviz.engine.Rasterizer;
 import guru.nidi.graphviz.model.MutableGraph;
 import guru.nidi.graphviz.parse.Parser;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -17,6 +18,7 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
+import org.jgrapht.io.StringComponentNameProvider;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import java.io.*;
@@ -43,7 +45,7 @@ public final class HelloJGraphT {
         }
     }
 
-    public static void main(String[] args) throws ExportException, IOException {
+    public static void main1(String[] args) throws ExportException, IOException {
         final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
 
         g.addVertex("a");
@@ -58,8 +60,29 @@ public final class HelloJGraphT {
         g.addEdge("b", "e");
         g.addEdge("e", "a");
 
+
         // cycles(g);
-        final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
+        final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>(
+                new StringComponentNameProvider<>(), null, null);
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        exporter.exportGraph(g, baos);
+        final InputStream is = new ByteArrayInputStream(baos.toByteArray());
+
+        final MutableGraph mutableGraph = Parser.read(is);
+        mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
+
+        Graphviz.fromGraph(mutableGraph)
+                .render(Format.PNG)
+                .toFile(new File("./graph.png"));
+    }
+
+    public static void main(String[] args) throws ExportException, IOException {
+        final Graph<String, DefaultEdge> g = getGraph(
+                "(C, D), (C, E), (D, F), (E, F), (E, G), (H, I)");
+
+        // cycles(g);
+        final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>(
+                new StringComponentNameProvider<>(), null, null);
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         exporter.exportGraph(g, baos);
@@ -73,27 +96,13 @@ public final class HelloJGraphT {
                 .toFile(new File("./graph.png"));
     }
 
-    public static void main1(String[] args) throws ExportException, IOException {
-        final ANTLRInputStream ais = new ANTLRInputStream("(a, b), (b, c), (c, d)");
+    public static Graph<String, DefaultEdge> getGraph(String graph) {
+        final ANTLRInputStream ais = new ANTLRInputStream(graph);
         final GraphLexer lexer = new GraphLexer(ais);
         final CommonTokenStream tokens = new CommonTokenStream(lexer);
         final GraphParser parser = new GraphParser(tokens);
         final ParseTree tree = parser.stat();
         final Visitor v = new Visitor();
-        final Graph<String, DefaultEdge> g = v.visit(tree);
-
-        // cycles(g);
-        final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exporter.exportGraph(g, baos);
-        final InputStream is = new ByteArrayInputStream(baos.toByteArray());
-
-        final MutableGraph mutableGraph = Parser.read(is);
-        mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
-
-        Graphviz.fromGraph(mutableGraph)
-                .render(Format.PNG)
-                .toFile(new File("./graph.png"));
+        return v.visit(tree);
     }
 }
