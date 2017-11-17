@@ -1,10 +1,16 @@
 package com.david;
 
+import com.david.parser.GraphLexer;
+import com.david.parser.GraphParser;
+import com.david.parser.Visitor;
 import guru.nidi.graphviz.attribute.RankDir;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.MutableGraph;
 import guru.nidi.graphviz.parse.Parser;
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.CycleDetector;
 import org.jgrapht.graph.DefaultDirectedGraph;
@@ -38,22 +44,46 @@ public final class HelloJGraphT {
     }
 
     public static void main(String[] args) throws ExportException, IOException {
-        final Graph<Integer, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
+        final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
 
-        g.addVertex(1);
-        g.addVertex(2);
-        g.addVertex(3);
-        g.addVertex(4);
-        g.addVertex(5);
+        g.addVertex("a");
+        g.addVertex("b");
+        g.addVertex("c");
+        g.addVertex("d");
+        g.addVertex("e");
 
-        g.addEdge(1, 2);
-        g.addEdge(2, 3);
-        g.addEdge(3, 4);
-        g.addEdge(2, 5);
-        g.addEdge(5, 1);
+        g.addEdge("a", "b");
+        g.addEdge("b", "c");
+        g.addEdge("c", "d");
+        g.addEdge("b", "e");
+        g.addEdge("e", "a");
 
         // cycles(g);
-        final DOTExporter<Integer, DefaultEdge> exporter = new DOTExporter<>();
+        final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
+
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        exporter.exportGraph(g, baos);
+        final InputStream is = new ByteArrayInputStream(baos.toByteArray());
+
+        final MutableGraph mutableGraph = Parser.read(is);
+        mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
+
+        Graphviz.fromGraph(mutableGraph)
+                .render(Format.PNG)
+                .toFile(new File("./graph.png"));
+    }
+
+    public static void main1(String[] args) throws ExportException, IOException {
+        final ANTLRInputStream ais = new ANTLRInputStream("(a, b), (b, c), (c, d)");
+        final GraphLexer lexer = new GraphLexer(ais);
+        final CommonTokenStream tokens = new CommonTokenStream(lexer);
+        final GraphParser parser = new GraphParser(tokens);
+        final ParseTree tree = parser.stat();
+        final Visitor v = new Visitor();
+        final Graph<String, DefaultEdge> g = v.visit(tree);
+
+        // cycles(g);
+        final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         exporter.exportGraph(g, baos);
