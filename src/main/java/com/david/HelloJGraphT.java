@@ -6,7 +6,6 @@ import com.david.parser.Visitor;
 import guru.nidi.graphviz.attribute.RankDir;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
-import guru.nidi.graphviz.engine.Rasterizer;
 import guru.nidi.graphviz.model.MutableGraph;
 import guru.nidi.graphviz.parse.Parser;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -14,8 +13,8 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.CycleDetector;
-import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.StringComponentNameProvider;
@@ -45,8 +44,8 @@ public final class HelloJGraphT {
         }
     }
 
-    public static void main1(String[] args) throws ExportException, IOException {
-        final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
+    public static void main(String[] args) throws ExportException, IOException {
+        final Graph<String, DefaultEdge> g = new DirectedMultigraph<>(DefaultEdge.class);
 
         g.addVertex("a");
         g.addVertex("b");
@@ -58,6 +57,7 @@ public final class HelloJGraphT {
         g.addEdge("b", "c");
         g.addEdge("c", "d");
         g.addEdge("b", "e");
+        g.addEdge("e", "a");
         g.addEdge("e", "a");
 
 
@@ -76,7 +76,7 @@ public final class HelloJGraphT {
                 .toFile(new File("./graph.png"));
     }
 
-    public static void main(String[] args) throws ExportException, IOException {
+    public static void main1(String[] args) throws ExportException, IOException {
         final Graph<String, DefaultEdge> g = getGraph(
                 "(C, D), (C, E), (D, F), (E, F), (E, G), (H, I)");
 
