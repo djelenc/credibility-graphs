@@ -21,6 +21,7 @@ import org.jgrapht.io.StringComponentNameProvider;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import java.io.*;
+import java.util.Map;
 import java.util.Set;
 
 public final class HelloJGraphT {
@@ -44,7 +45,7 @@ public final class HelloJGraphT {
         }
     }
 
-    public static void main(String[] args) throws ExportException, IOException {
+    public static void main1(String[] args) throws ExportException, IOException {
         final Graph<String, DefaultEdge> g = new DirectedMultigraph<>(DefaultEdge.class);
 
         g.addVertex("a");
@@ -76,9 +77,9 @@ public final class HelloJGraphT {
                 .toFile(new File("./graph.png"));
     }
 
-    public static void main1(String[] args) throws ExportException, IOException {
+    public static void main2(String[] args) throws ExportException, IOException {
         final Graph<String, DefaultEdge> g = getGraph(
-                "(C, D), (C, E), (D, F), (E, F), (E, G), (H, I)");
+                "(C, D), (C, E), (D, F), (E, F), (E, G), (H, I)").get("");
 
         // cycles(g);
         final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>(
@@ -96,7 +97,30 @@ public final class HelloJGraphT {
                 .toFile(new File("./graph.png"));
     }
 
-    public static Graph<String, DefaultEdge> getGraph(String graph) {
+    public static void main(String[] args) throws ExportException, IOException {
+        final Map<String, Graph<String, DefaultEdge>> graphs = getGraph(
+                "(C, D,A), (C, E,B), (D, F,A), (E, F,B), (E, G,A), (H, I,B)");
+
+        // cycles(g);
+
+        for (Map.Entry<String, Graph<String, DefaultEdge>> graph : graphs.entrySet()) {
+            final DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>(
+                    new StringComponentNameProvider<>(), null, null);
+
+            final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            exporter.exportGraph(graph.getValue(), baos);
+            final InputStream is = new ByteArrayInputStream(baos.toByteArray());
+
+            final MutableGraph mutableGraph = Parser.read(is);
+            mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
+
+            Graphviz.fromGraph(mutableGraph)
+                    .render(Format.PNG)
+                    .toFile(new File("./node" + graph.getKey() + ".png"));
+        }
+    }
+
+    public static Map<String, Graph<String, DefaultEdge>> getGraph(String graph) {
         final ANTLRInputStream ais = new ANTLRInputStream(graph);
         final GraphLexer lexer = new GraphLexer(ais);
         final CommonTokenStream tokens = new CommonTokenStream(lexer);

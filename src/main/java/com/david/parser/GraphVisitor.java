@@ -1,4 +1,5 @@
 package com.david.parser;// Generated from Graph.g4 by ANTLR 4.6
+
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
 /**
@@ -6,13 +7,30 @@ import org.antlr.v4.runtime.tree.ParseTreeVisitor;
  * by {@link GraphParser}.
  *
  * @param <T> The return type of the visit operation. Use {@link Void} for
- * operations with no return type.
+ *            operations with no return type.
  */
 public interface GraphVisitor<T> extends ParseTreeVisitor<T> {
-	/**
-	 * Visit a parse tree produced by {@link GraphParser#stat}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitStat(GraphParser.StatContext ctx);
+    /**
+     * Visit a parse tree produced by {@link GraphParser#stat}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitStat(GraphParser.StatContext ctx);
+
+    /**
+     * Visit a parse tree produced by {@link GraphParser#tuples}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitTuples(GraphParser.TuplesContext ctx);
+
+    /**
+     * Visit a parse tree produced by {@link GraphParser#objects}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitObjects(GraphParser.ObjectsContext ctx);
 }
