@@ -51,7 +51,8 @@ public final class App {
         final Graph<String, ReporterEdge> graph = merge(graphs);
 
         final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
-        final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths("A1", "A4", false, 99);
+        final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths("A1", "A4",
+                false, graphs.size());
 
         for (GraphPath<String, ReporterEdge> path : paths) {
             for (ReporterEdge edge : path.getEdgeList()) {
