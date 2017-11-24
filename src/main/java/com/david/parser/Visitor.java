@@ -34,7 +34,7 @@ public class Visitor extends GraphBaseVisitor<Map<String, Graph<String, DefaultE
                 throw new IllegalArgumentException("An invalid graph string.");
             }
 
-            // parsing credibility tuples, like (A, B, C)
+            // parsing credibility objects, like (A, B, C)
             final Iterator<TerminalNode> iterator = ctx.objects().NODE().iterator();
 
             while (iterator.hasNext()) {
