@@ -62,7 +62,7 @@ public final class App {
     public static void main(String[] args) throws ExportException, IOException {
         //drawTuples();
         // drawObjects();
-        // drawEX2();
+        drawEX2();
         // pathFinder();
     }
 }

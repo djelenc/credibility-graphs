@@ -21,6 +21,7 @@ import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.StringComponentNameProvider;
+import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import java.io.*;
 import java.util.HashMap;
@@ -127,6 +128,29 @@ public final class CredibilityOrders {
             graph.addEdge(source, target, new ReporterEdge(source, target, reporter));
         }
     }
+
+    public static void minimalSources(Graph<String, ReporterEdge> graph, String source, String target) {
+        final List<GraphPath<String, ReporterEdge>> paths = findPaths(graph, source, target);
+
+        for (GraphPath<String, ReporterEdge> path : paths) {
+            System.out.println("Path: " + path);
+            final TopologicalOrderIterator<String, ReporterEdge> iterator = new TopologicalOrderIterator<>(path.getGraph());
+            iterator.setCrossComponentTraversal(false);
+
+            while (iterator.hasNext()) {
+                final String current = iterator.next();
+                System.out.print(current + ", ");
+            }
+            System.out.println();
+
+//            final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(path.getGraph());
+//            final Set<String> reporters = path.getEdgeList().stream().map(ReporterEdge::toString).collect(Collectors.toSet());
+//            final List<GraphPath<String, ReporterEdge>> allPaths = finder.getAllPaths(reporters, reporters, true, null);
+//            System.out.printf("Path: %s, Reporters: %s, all-paths: %s%n", path, reporters, allPaths);
+        }
+
+    }
+
 
     /**
      * Exports given graph into DOT file and invokes the dot-parser to create a PNG image

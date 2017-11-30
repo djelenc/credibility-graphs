@@ -46,4 +46,9 @@ public class CredibilityOrderTest {
         CredibilityOrders.expand(graph, "A4", "A1", "A2");
         assertFalse(graph.containsEdge("A4", "A1"));
     }
+
+    @Test
+    public void minimalSources() {
+        CredibilityOrders.minimalSources(graph, "A1", "A4");
+    }
 }
