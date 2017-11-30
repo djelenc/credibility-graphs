@@ -8,7 +8,10 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import static com.david.App.OBJECTS_EX2;
 import static com.david.CredibilityOrders.merge;
 import static com.david.CredibilityOrders.parseObjects;
 import static junit.framework.TestCase.assertFalse;
@@ -21,8 +24,7 @@ public class CredibilityOrderTest {
 
     @Before
     public void setUp() {
-        final Map<String, Graph<String, DefaultEdge>> graphs = parseObjects(
-                "(B,F1,F2),(F1,F2,F3),(F2,F3,B),(A1,A2,F1),(A1,A3,F1),(A2,A4,B),(A2,A4,F3),(A3,A4,F2)");
+        final Map<String, Graph<String, DefaultEdge>> graphs = parseObjects(OBJECTS_EX2);
         this.graph = merge(graphs);
     }
 
@@ -49,6 +51,9 @@ public class CredibilityOrderTest {
 
     @Test
     public void minimalSources() {
-        CredibilityOrders.minimalSources(graph, "A1", "A4");
+        final Set<ReporterEdge> toRemove = CredibilityOrders.minimalSources(graph, "A1", "A4");
+        System.out.println(toRemove.stream()
+                .map(e -> String.format("[(%s, %s), %s]", e.getV1(), e.getV2(), e.toString()))
+                .collect(Collectors.toSet()));
     }
 }

@@ -21,13 +21,10 @@ import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.StringComponentNameProvider;
-import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public final class CredibilityOrders {
 
@@ -129,26 +126,43 @@ public final class CredibilityOrders {
         }
     }
 
-    public static void minimalSources(Graph<String, ReporterEdge> graph, String source, String target) {
+    public static Set<ReporterEdge> minimalSources(Graph<String, ReporterEdge> graph, String source, String target) {
         final List<GraphPath<String, ReporterEdge>> paths = findPaths(graph, source, target);
 
+        final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(graph);
+
+        final Set<ReporterEdge> toRemove = new HashSet<>();
+
         for (GraphPath<String, ReporterEdge> path : paths) {
-            System.out.println("Path: " + path);
-            final TopologicalOrderIterator<String, ReporterEdge> iterator = new TopologicalOrderIterator<>(path.getGraph());
-            iterator.setCrossComponentTraversal(false);
+            final List<ReporterEdge> edges = path.getEdgeList();
+            final Set<ReporterEdge> candidates = new HashSet<>(edges);
 
-            while (iterator.hasNext()) {
-                final String current = iterator.next();
-                System.out.print(current + ", ");
+            for (ReporterEdge reporterTwo : edges) {
+                for (ReporterEdge reporterOne : edges) {
+                    if (reporterTwo.toString().equals(reporterOne.toString())) {
+                        continue;
+                    }
+
+                    final List<GraphPath<String, ReporterEdge>> one2two = finder.getAllPaths(reporterTwo.toString(), reporterOne.toString(), true, null);
+                    final List<GraphPath<String, ReporterEdge>> two2one = finder.getAllPaths(reporterOne.toString(), reporterTwo.toString(), true, null);
+
+                    if (one2two.isEmpty() && two2one.isEmpty()) {
+                        continue;
+                    }
+
+
+                    if (!one2two.isEmpty()) {
+                        candidates.remove(reporterOne);
+                    } else {
+                        candidates.remove(reporterTwo);
+                    }
+                }
             }
-            System.out.println();
 
-//            final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(path.getGraph());
-//            final Set<String> reporters = path.getEdgeList().stream().map(ReporterEdge::toString).collect(Collectors.toSet());
-//            final List<GraphPath<String, ReporterEdge>> allPaths = finder.getAllPaths(reporters, reporters, true, null);
-//            System.out.printf("Path: %s, Reporters: %s, all-paths: %s%n", path, reporters, allPaths);
+            toRemove.addAll(candidates);
         }
 
+        return toRemove;
     }
 
 
