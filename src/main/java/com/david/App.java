@@ -2,7 +2,6 @@ package com.david;
 
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
-import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.io.ExportException;
 
@@ -50,9 +49,7 @@ public final class App {
                 "(B,F1,F2),(F1,F2,F3),(F2,F3,B),(A1,A2,F1),(A1,A3,F1),(A2,A4,B),(A2,A4,F3),(A3,A4,F2)");
         final Graph<String, ReporterEdge> graph = merge(graphs);
 
-        final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
-        final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths("A1", "A4",
-                false, graphs.size());
+        final List<GraphPath<String, ReporterEdge>> paths = findPaths(graph, "A1", "A4");
 
         for (GraphPath<String, ReporterEdge> path : paths) {
             for (ReporterEdge edge : path.getEdgeList()) {
@@ -66,6 +63,6 @@ public final class App {
         //drawTuples();
         // drawObjects();
         // drawEX2();
-        pathFinder();
+        // pathFinder();
     }
 }

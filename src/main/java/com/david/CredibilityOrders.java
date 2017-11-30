@@ -12,7 +12,9 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
 import org.jgrapht.alg.CycleDetector;
+import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.graph.ClassBasedEdgeFactory;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedMultigraph;
@@ -22,25 +24,11 @@ import org.jgrapht.io.StringComponentNameProvider;
 
 import java.io.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public final class CredibilityOrders {
-
-    public static <Vertex, Edge> Map<Vertex, Set<Vertex>> findCycles(Graph<Vertex, Edge> graph) {
-        final CycleDetector<Vertex, Edge> cycleDetector = new CycleDetector<>(graph);
-        final Map<Vertex, Set<Vertex>> cylceMap = new HashMap<>();
-
-        if (cycleDetector.detectCycles()) {
-            final Set<Vertex> cycles = cycleDetector.findCycles();
-
-            for (Vertex cycle : cycles) {
-                cylceMap.put(cycle, cycleDetector.findCyclesContainingVertex(cycle));
-            }
-        }
-
-        return cylceMap;
-    }
 
     private static Map<String, Graph<String, DefaultEdge>> parseStringGraph(String graph) {
         final ANTLRInputStream ais = new ANTLRInputStream(graph);
@@ -94,6 +82,63 @@ public final class CredibilityOrders {
         return merged;
     }
 
+    public static <Vertex, Edge> Map<Vertex, Set<Vertex>> findCycles(Graph<Vertex, Edge> graph) {
+        final CycleDetector<Vertex, Edge> cycleDetector = new CycleDetector<>(graph);
+        final Map<Vertex, Set<Vertex>> cylceMap = new HashMap<>();
+
+        if (cycleDetector.detectCycles()) {
+            final Set<Vertex> cycles = cycleDetector.findCycles();
+
+            for (Vertex cycle : cycles) {
+                cylceMap.put(cycle, cycleDetector.findCyclesContainingVertex(cycle));
+            }
+        }
+
+        return cylceMap;
+    }
+
+    /**
+     * Finds all paths in given graph between given source and target vertex
+     *
+     * @param graph
+     * @param sourceVertex
+     * @param targetVertex
+     * @return
+     */
+    public static List<GraphPath<String, ReporterEdge>> findPaths(Graph<String, ReporterEdge> graph, String sourceVertex, String targetVertex) {
+        final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
+        return pathFinder.getAllPaths(sourceVertex, targetVertex,
+                false, graph.edgeSet().size());
+    }
+
+    /**
+     * Expands given graph by adding a new edge from source to target that is prvided by the reporter
+     *
+     * @param graph
+     * @param source
+     * @param target
+     * @param reporter
+     */
+    public static void expand(Graph<String, ReporterEdge> graph, String source, String target, String reporter) {
+        final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
+        final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths(target, source, true, null);
+
+        if (paths.size() == 0) {
+            graph.addEdge(source, target, new ReporterEdge(source, target, reporter));
+        }
+    }
+
+    /**
+     * Exports given graph into DOT file and invokes the dot-parser to create a PNG image
+     *
+     * @param graph
+     * @param pathName
+     * @param labels
+     * @param <Vertex>
+     * @param <Edge>
+     * @throws ExportException
+     * @throws IOException
+     */
     public static <Vertex, Edge> void exportDOT(Graph<Vertex, Edge> graph, String pathName, boolean labels)
             throws ExportException, IOException {
         final DOTExporter<Vertex, Edge> exporter = new DOTExporter<>(
