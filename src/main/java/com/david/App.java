@@ -1,12 +1,10 @@
 package com.david;
 
 import org.jgrapht.Graph;
-import org.jgrapht.GraphPath;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.io.ExportException;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import static com.david.CredibilityOrders.*;
@@ -47,7 +45,9 @@ public final class App {
     }
 
     public static void main(String[] args) throws ExportException, IOException {
-        drawEX2();
-        drawEX5();
+        // drawTuples();
+        // drawObjects();
+        // drawEX2();
+        // drawEX5();
     }
 }

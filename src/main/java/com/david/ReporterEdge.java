@@ -21,7 +21,31 @@ public class ReporterEdge extends DefaultEdge {
         return v2;
     }
 
-    public String toString() {
+    public String getLabel() {
         return label;
+    }
+
+    public String toString() {
+        return String.format("%s (%s-%s)", label, v1, v2);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ReporterEdge that = (ReporterEdge) o;
+
+        if (v1 != null ? !v1.equals(that.v1) : that.v1 != null) return false;
+        if (v2 != null ? !v2.equals(that.v2) : that.v2 != null) return false;
+        return label != null ? label.equals(that.label) : that.label == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = v1 != null ? v1.hashCode() : 0;
+        result = 31 * result + (v2 != null ? v2.hashCode() : 0);
+        result = 31 * result + (label != null ? label.hashCode() : 0);
+        return result;
     }
 }

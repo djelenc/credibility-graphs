@@ -18,13 +18,13 @@ import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.graph.ClassBasedEdgeFactory;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.jgrapht.io.ComponentNameProvider;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.StringComponentNameProvider;
 
 import java.io.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public final class CredibilityOrders {
 
@@ -103,7 +103,8 @@ public final class CredibilityOrders {
      * @param targetVertex
      * @return
      */
-    public static List<GraphPath<String, ReporterEdge>> findPaths(Graph<String, ReporterEdge> graph, String sourceVertex, String targetVertex) {
+    public static List<GraphPath<String, ReporterEdge>> findPaths(Graph<String, ReporterEdge> graph,
+                                                                  String sourceVertex, String targetVertex) {
         final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
         return pathFinder.getAllPaths(sourceVertex, targetVertex,
                 false, graph.edgeSet().size());
@@ -119,7 +120,8 @@ public final class CredibilityOrders {
      */
     public static void expand(Graph<String, ReporterEdge> graph, String source, String target, String reporter) {
         final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
-        final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths(target, source, true, null);
+        final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths(
+                target, source, true, null);
 
         if (paths.size() == 0) {
             graph.addEdge(source, target, new ReporterEdge(source, target, reporter));
@@ -139,12 +141,14 @@ public final class CredibilityOrders {
 
             for (ReporterEdge reporterTwo : edges) {
                 for (ReporterEdge reporterOne : edges) {
-                    if (reporterTwo.toString().equals(reporterOne.toString())) {
+                    if (reporterTwo.getLabel().equals(reporterOne.getLabel())) {
                         continue;
                     }
 
-                    final List<GraphPath<String, ReporterEdge>> one2two = finder.getAllPaths(reporterTwo.toString(), reporterOne.toString(), true, null);
-                    final List<GraphPath<String, ReporterEdge>> two2one = finder.getAllPaths(reporterOne.toString(), reporterTwo.toString(), true, null);
+                    final List<GraphPath<String, ReporterEdge>> one2two = finder.getAllPaths(
+                            reporterTwo.getLabel(), reporterOne.getLabel(), true, null);
+                    final List<GraphPath<String, ReporterEdge>> two2one = finder.getAllPaths(
+                            reporterOne.getLabel(), reporterTwo.getLabel(), true, null);
 
                     if (one2two.isEmpty() && two2one.isEmpty()) {
                         continue;
@@ -182,7 +186,7 @@ public final class CredibilityOrders {
         final DOTExporter<Vertex, Edge> exporter = new DOTExporter<>(
                 new StringComponentNameProvider<>(),
                 null,
-                labels ? new StringComponentNameProvider<>() : null);
+                labels ? (ComponentNameProvider<Edge>) component -> ((ReporterEdge) component).getLabel() : null);
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         exporter.exportGraph(graph, baos);

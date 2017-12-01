@@ -6,9 +6,7 @@ import org.jgrapht.graph.DefaultEdge;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.david.App.OBJECTS_EX2;
@@ -40,7 +38,7 @@ public class CredibilityOrderTest {
 
         assertTrue(graph.containsEdge("A1", "F3"));
         final ReporterEdge edge = graph.getEdge("A1", "F3");
-        assertEquals(edge.toString(), "A2");
+        assertEquals(edge.getLabel(), "A2");
     }
 
     @Test
@@ -51,9 +49,30 @@ public class CredibilityOrderTest {
 
     @Test
     public void minimalSources() {
-        final Set<ReporterEdge> toRemove = CredibilityOrders.minimalSources(graph, "A1", "A4");
-        System.out.println(toRemove.stream()
-                .map(e -> String.format("[(%s, %s), %s]", e.getV1(), e.getV2(), e.toString()))
-                .collect(Collectors.toSet()));
+        final Set<ReporterEdge> actual = CredibilityOrders.minimalSources(graph, "A1", "A4");
+
+        final Set<ReporterEdge> expected = new HashSet<>();
+        Collections.addAll(expected,
+                new ReporterEdge("A1", "A2", "F1"),
+                new ReporterEdge("A2", "A4", "B"),
+                new ReporterEdge("A1", "A3", "F1"));
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void minimalSourcesIncomparable() {
+        final String input = "(4,5,A),(1,5,A),(2,5,A),(3,5,A),(4,5,A),(A,B,1),(A,C,5),(B,D,4),(C,D,3)";
+        final Graph<String, ReporterEdge> graph = merge(parseObjects(input));
+
+        final Set<ReporterEdge> actual = CredibilityOrders.minimalSources(graph, "A", "D");
+
+        final Set<ReporterEdge> expected = new HashSet<>();
+        Collections.addAll(expected,
+                new ReporterEdge("A", "B", "1"),
+                new ReporterEdge("B", "D", "4"),
+                new ReporterEdge("C", "D", "3"));
+
+        assertEquals(expected, actual);
     }
 }
