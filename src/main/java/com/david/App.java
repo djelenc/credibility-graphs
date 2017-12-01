@@ -37,6 +37,14 @@ public final class App {
         exportDOT(graph, "./fig-ex2.png", true);
     }
 
+    public static void drawContraction() throws ExportException, IOException {
+        final Map<String, Graph<String, DefaultEdge>> graphs = parseObjects(OBJECTS_EX2);
+        final Graph<String, ReporterEdge> graph = merge(graphs);
+
+        CredibilityOrders.reliabilityContraction(graph, "A1", "A4");
+        exportDOT(graph, "./fig-ex2-contracted.png", true);
+    }
+
     public static void drawEX5() throws ExportException, IOException {
         final Map<String, Graph<String, DefaultEdge>> graphs = parseObjects(OBJECTS_EX5);
         final Graph<String, ReporterEdge> graph = merge(graphs);
@@ -49,5 +57,6 @@ public final class App {
         // drawObjects();
         // drawEX2();
         // drawEX5();
+        drawContraction();
     }
 }

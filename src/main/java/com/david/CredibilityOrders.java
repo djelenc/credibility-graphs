@@ -80,19 +80,49 @@ public final class CredibilityOrders {
         return merged;
     }
 
+    /**
+     * Exports given graph into DOT file and invokes the dot-parser to create a PNG image
+     *
+     * @param graph
+     * @param pathName
+     * @param labels
+     * @param <Vertex>
+     * @param <Edge>
+     * @throws ExportException
+     * @throws IOException
+     */
+    public static <Vertex, Edge> void exportDOT(Graph<Vertex, Edge> graph, String pathName, boolean labels)
+            throws ExportException, IOException {
+        final DOTExporter<Vertex, Edge> exporter = new DOTExporter<>(
+                new StringComponentNameProvider<>(),
+                null,
+                labels ? (ComponentNameProvider<Edge>) component -> ((ReporterEdge) component).getLabel() : null);
+
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        exporter.exportGraph(graph, baos);
+        final InputStream is = new ByteArrayInputStream(baos.toByteArray());
+
+        final MutableGraph mutableGraph = Parser.read(is);
+        mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
+
+        Graphviz.fromGraph(mutableGraph)
+                .render(Format.PNG)
+                .toFile(new File(pathName));
+    }
+
     public static <Vertex, Edge> Map<Vertex, Set<Vertex>> findCycles(Graph<Vertex, Edge> graph) {
         final CycleDetector<Vertex, Edge> cycleDetector = new CycleDetector<>(graph);
-        final Map<Vertex, Set<Vertex>> cylceMap = new HashMap<>();
+        final Map<Vertex, Set<Vertex>> cycleMap = new HashMap<>();
 
         if (cycleDetector.detectCycles()) {
             final Set<Vertex> cycles = cycleDetector.findCycles();
 
             for (Vertex cycle : cycles) {
-                cylceMap.put(cycle, cycleDetector.findCyclesContainingVertex(cycle));
+                cycleMap.put(cycle, cycleDetector.findCyclesContainingVertex(cycle));
             }
         }
 
-        return cylceMap;
+        return cycleMap;
     }
 
     /**
@@ -133,7 +163,7 @@ public final class CredibilityOrders {
 
         final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(graph);
 
-        final Set<ReporterEdge> toRemove = new HashSet<>();
+        final Set<ReporterEdge> minimalSources = new HashSet<>();
 
         for (GraphPath<String, ReporterEdge> path : paths) {
             final List<ReporterEdge> edges = path.getEdgeList();
@@ -163,40 +193,14 @@ public final class CredibilityOrders {
                 }
             }
 
-            toRemove.addAll(candidates);
+            minimalSources.addAll(candidates);
         }
 
-        return toRemove;
+        return minimalSources;
     }
 
-
-    /**
-     * Exports given graph into DOT file and invokes the dot-parser to create a PNG image
-     *
-     * @param graph
-     * @param pathName
-     * @param labels
-     * @param <Vertex>
-     * @param <Edge>
-     * @throws ExportException
-     * @throws IOException
-     */
-    public static <Vertex, Edge> void exportDOT(Graph<Vertex, Edge> graph, String pathName, boolean labels)
-            throws ExportException, IOException {
-        final DOTExporter<Vertex, Edge> exporter = new DOTExporter<>(
-                new StringComponentNameProvider<>(),
-                null,
-                labels ? (ComponentNameProvider<Edge>) component -> ((ReporterEdge) component).getLabel() : null);
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exporter.exportGraph(graph, baos);
-        final InputStream is = new ByteArrayInputStream(baos.toByteArray());
-
-        final MutableGraph mutableGraph = Parser.read(is);
-        mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
-
-        Graphviz.fromGraph(mutableGraph)
-                .render(Format.PNG)
-                .toFile(new File(pathName));
+    public static void reliabilityContraction(Graph<String, ReporterEdge> graph, String source, String target) {
+        final Set<ReporterEdge> toRemove = minimalSources(graph, source, target);
+        graph.removeAllEdges(toRemove);
     }
 }

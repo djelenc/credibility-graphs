@@ -2,12 +2,12 @@ package com.david;
 
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
+import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.graph.DefaultEdge;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.david.App.OBJECTS_EX2;
 import static com.david.CredibilityOrders.merge;
@@ -18,7 +18,7 @@ import static org.junit.Assert.assertTrue;
 
 public class CredibilityOrderTest {
 
-    Graph<String, ReporterEdge> graph = null;
+    private Graph<String, ReporterEdge> graph = null;
 
     @Before
     public void setUp() {
@@ -74,5 +74,19 @@ public class CredibilityOrderTest {
                 new ReporterEdge("C", "D", "3"));
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void reliabilityContraction() {
+        final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(graph);
+        final List<GraphPath<String, ReporterEdge>> pathsBefore = CredibilityOrders.findPaths(graph, "A1", "A4");
+        assertEquals(3, pathsBefore.size());
+        assertEquals(8, graph.edgeSet().size());
+
+        CredibilityOrders.reliabilityContraction(graph, "A1", "A4");
+
+        final List<GraphPath<String, ReporterEdge>> pathsAfter = CredibilityOrders.findPaths(graph, "A1", "A4");
+        assertEquals(0, pathsAfter.size());
+        assertEquals(5, graph.edgeSet().size());
     }
 }
