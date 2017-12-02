@@ -26,7 +26,23 @@ import org.jgrapht.io.StringComponentNameProvider;
 import java.io.*;
 import java.util.*;
 
-public final class CredibilityOrders {
+public final class CredibilityGraph {
+
+    final Graph<String, ReporterEdge> graph;
+
+    public CredibilityGraph(String credibilityObjects) {
+        graph = merge(parseObjects(credibilityObjects));
+    }
+
+    protected Map<String, Graph<String, DefaultEdge>> parseObjects(String objects) {
+        final Map<String, Graph<String, DefaultEdge>> graphs = parseStringGraph(objects);
+
+        if (!graphs.containsKey("")) {
+            return graphs;
+        }
+
+        throw new IllegalArgumentException("Invalid objects: " + objects);
+    }
 
     private static Map<String, Graph<String, DefaultEdge>> parseStringGraph(String graph) {
         final ANTLRInputStream ais = new ANTLRInputStream(graph);
@@ -38,27 +54,7 @@ public final class CredibilityOrders {
         return v.visit(tree);
     }
 
-    public static Graph<String, DefaultEdge> parseTuples(String tuples) {
-        final Map<String, Graph<String, DefaultEdge>> graphs = parseStringGraph(tuples);
-
-        if (graphs.size() == 1 && graphs.containsKey("")) {
-            return graphs.get("");
-        }
-
-        throw new IllegalArgumentException("Invalid tuples: " + tuples);
-    }
-
-    public static Map<String, Graph<String, DefaultEdge>> parseObjects(String objects) {
-        final Map<String, Graph<String, DefaultEdge>> graphs = parseStringGraph(objects);
-
-        if (!graphs.containsKey("")) {
-            return graphs;
-        }
-
-        throw new IllegalArgumentException("Invalid objects: " + objects);
-    }
-
-    public static Graph<String, ReporterEdge> merge(Map<String, Graph<String, DefaultEdge>> graphs) {
+    protected Graph<String, ReporterEdge> merge(Map<String, Graph<String, DefaultEdge>> graphs) {
         final DirectedMultigraph<String, ReporterEdge> merged = new DirectedMultigraph<>(
                 new ClassBasedEdgeFactory<String, ReporterEdge>(ReporterEdge.class));
 
@@ -83,20 +79,17 @@ public final class CredibilityOrders {
     /**
      * Exports given graph into DOT file and invokes the dot-parser to create a PNG image
      *
-     * @param graph
      * @param pathName
-     * @param labels
-     * @param <Vertex>
-     * @param <Edge>
+     * @param labels   If true, prints edges' labels
      * @throws ExportException
      * @throws IOException
      */
-    public static <Vertex, Edge> void exportDOT(Graph<Vertex, Edge> graph, String pathName, boolean labels)
+    public void exportDOT(String pathName, boolean labels)
             throws ExportException, IOException {
-        final DOTExporter<Vertex, Edge> exporter = new DOTExporter<>(
+        final DOTExporter<String, ReporterEdge> exporter = new DOTExporter<>(
                 new StringComponentNameProvider<>(),
                 null,
-                labels ? (ComponentNameProvider<Edge>) component -> ((ReporterEdge) component).getLabel() : null);
+                labels ? (ComponentNameProvider<ReporterEdge>) component -> component.getLabel() : null);
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         exporter.exportGraph(graph, baos);
@@ -110,14 +103,14 @@ public final class CredibilityOrders {
                 .toFile(new File(pathName));
     }
 
-    public static <Vertex, Edge> Map<Vertex, Set<Vertex>> findCycles(Graph<Vertex, Edge> graph) {
-        final CycleDetector<Vertex, Edge> cycleDetector = new CycleDetector<>(graph);
-        final Map<Vertex, Set<Vertex>> cycleMap = new HashMap<>();
+    protected Map<String, Set<String>> findCycles() {
+        final CycleDetector<String, ReporterEdge> cycleDetector = new CycleDetector<>(graph);
+        final Map<String, Set<String>> cycleMap = new HashMap<>();
 
         if (cycleDetector.detectCycles()) {
-            final Set<Vertex> cycles = cycleDetector.findCycles();
+            final Set<String> cycles = cycleDetector.findCycles();
 
-            for (Vertex cycle : cycles) {
+            for (String cycle : cycles) {
                 cycleMap.put(cycle, cycleDetector.findCyclesContainingVertex(cycle));
             }
         }
@@ -128,38 +121,48 @@ public final class CredibilityOrders {
     /**
      * Finds all paths in given graph between given source and target vertex
      *
-     * @param graph
      * @param sourceVertex
      * @param targetVertex
      * @return
      */
-    public static List<GraphPath<String, ReporterEdge>> findPaths(Graph<String, ReporterEdge> graph,
-                                                                  String sourceVertex, String targetVertex) {
+    protected List<GraphPath<String, ReporterEdge>> findPaths(String sourceVertex, String targetVertex) {
         final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
         return pathFinder.getAllPaths(sourceVertex, targetVertex,
                 false, graph.edgeSet().size());
     }
 
     /**
-     * Expands given graph by adding a new edge from source to target that is prvided by the reporter
+     * Expands the graph by adding a new edge from source to target that is provided by the reporter.
+     * Returns true on success, false otherwise.
      *
-     * @param graph
      * @param source
      * @param target
      * @param reporter
+     * @return
      */
-    public static void expand(Graph<String, ReporterEdge> graph, String source, String target, String reporter) {
+    public boolean expand(String source, String target, String reporter) {
         final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
         final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths(
                 target, source, true, null);
 
         if (paths.size() == 0) {
             graph.addEdge(source, target, new ReporterEdge(source, target, reporter));
+            return true;
         }
+
+        return false;
     }
 
-    public static Set<ReporterEdge> minimalSources(Graph<String, ReporterEdge> graph, String source, String target) {
-        final List<GraphPath<String, ReporterEdge>> paths = findPaths(graph, source, target);
+    /**
+     * Find all paths between source and target and then for each path return those edges
+     * (credibility objects) whose credibility is the lowest.
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    public Set<ReporterEdge> minimalSources(String source, String target) {
+        final List<GraphPath<String, ReporterEdge>> paths = findPaths(source, target);
 
         final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(graph);
 
@@ -199,8 +202,14 @@ public final class CredibilityOrders {
         return minimalSources;
     }
 
-    public static void reliabilityContraction(Graph<String, ReporterEdge> graph, String source, String target) {
-        final Set<ReporterEdge> toRemove = minimalSources(graph, source, target);
+    /**
+     * Removes all paths from source to target by removing the minimal number of credibility objects.
+     *
+     * @param source
+     * @param target
+     */
+    public void reliabilityContraction(String source, String target) {
+        final Set<ReporterEdge> toRemove = minimalSources(source, target);
         graph.removeAllEdges(toRemove);
     }
 }

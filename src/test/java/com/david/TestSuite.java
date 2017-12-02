@@ -5,7 +5,7 @@ import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
-@SuiteClasses({CredibilityOrderTest.class})
+@SuiteClasses({CredibilityGraphTest.class})
 public class TestSuite {
 
 }
