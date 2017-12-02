@@ -90,4 +90,17 @@ public class CredibilityGraphTest {
         assertEquals(1, pathsAfter.size());
         assertEquals(6, graph.graph.edgeSet().size());
     }
+
+    @Test
+    public void prioritizedRevisionNoRemoval() {
+        final List<GraphPath<String, ReporterEdge>> pathsBefore = graph.findPaths("A1", "A4");
+        assertEquals(3, pathsBefore.size());
+        assertEquals(8, graph.graph.edgeSet().size());
+
+        graph.prioritizedRevision("A1", "A4", "F3");
+
+        final List<GraphPath<String, ReporterEdge>> pathsAfter = graph.findPaths("A1", "A4");
+        assertEquals(4, pathsAfter.size());
+        assertEquals(9, graph.graph.edgeSet().size());
+    }
 }
