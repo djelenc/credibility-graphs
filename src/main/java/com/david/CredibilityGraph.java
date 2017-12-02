@@ -28,7 +28,7 @@ import java.util.*;
 
 public final class CredibilityGraph {
 
-    final Graph<String, ReporterEdge> graph;
+    protected final Graph<String, ReporterEdge> graph;
 
     public CredibilityGraph(String credibilityObjects) {
         graph = merge(parseObjects(credibilityObjects));
@@ -211,5 +211,10 @@ public final class CredibilityGraph {
     public void reliabilityContraction(String source, String target) {
         final Set<ReporterEdge> toRemove = minimalSources(source, target);
         graph.removeAllEdges(toRemove);
+    }
+
+    public void prioritizedRevision(String source, String target, String reporter) {
+        reliabilityContraction(target, source);
+        expand(source, target, reporter);
     }
 }

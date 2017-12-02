@@ -77,4 +77,17 @@ public class CredibilityGraphTest {
         assertEquals(0, pathsAfter.size());
         assertEquals(5, graph.graph.edgeSet().size());
     }
+
+    @Test
+    public void prioritizedRevision() {
+        final List<GraphPath<String, ReporterEdge>> pathsBefore = graph.findPaths("A2", "A1");
+        assertEquals(0, pathsBefore.size());
+        assertEquals(8, graph.graph.edgeSet().size());
+
+        graph.prioritizedRevision("A4", "A1", "F3");
+
+        final List<GraphPath<String, ReporterEdge>> pathsAfter = graph.findPaths("A2", "A1");
+        assertEquals(1, pathsAfter.size());
+        assertEquals(6, graph.graph.edgeSet().size());
+    }
 }

@@ -23,9 +23,16 @@ public final class App {
         graph.exportDOT("./fig-ex2-contracted.png", true);
     }
 
+    public static void drawPrioritizedRevision() throws ExportException, IOException {
+        final CredibilityGraph graph = new CredibilityGraph(OBJECTS_EX2);
+        graph.prioritizedRevision("A4", "A1", "F3");
+        graph.exportDOT("./fig-ex2-revised.png", true);
+    }
+
     public static void main(String[] args) throws ExportException, IOException {
-        drawEX2();
-        drawEX5();
-        drawContraction();
+        // drawEX2();
+        // drawEX5();
+        // drawContraction();
+        drawPrioritizedRevision();
     }
 }
