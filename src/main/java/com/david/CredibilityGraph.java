@@ -22,11 +22,16 @@ import org.jgrapht.io.ComponentNameProvider;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.StringComponentNameProvider;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.*;
 import java.util.*;
 
 public final class CredibilityGraph {
+
+    public enum Sources {
+        MINIMAL, MAXIMAL
+    }
 
     protected final Graph<String, ReporterEdge> graph;
 
@@ -154,52 +159,60 @@ public final class CredibilityGraph {
     }
 
     /**
-     * Find all paths between source and target and then for each path return those edges
-     * (credibility objects) whose credibility is the lowest.
+     * ind all paths between source and target and then for each path return those edges
+     * (credibility objects) whose credibility is the largest/lowest (depends on type).
      *
      * @param source
      * @param target
+     * @param type
      * @return
      */
-    public Set<ReporterEdge> minimalSources(String source, String target) {
+    protected Set<ReporterEdge> getSources(String source, String target, Sources type) {
         final List<GraphPath<String, ReporterEdge>> paths = findPaths(source, target);
 
         final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(graph);
 
-        final Set<ReporterEdge> minimalSources = new HashSet<>();
+        final Set<ReporterEdge> sources = new HashSet<>();
 
         for (GraphPath<String, ReporterEdge> path : paths) {
             final List<ReporterEdge> edges = path.getEdgeList();
             final Set<ReporterEdge> candidates = new HashSet<>(edges);
 
-            for (ReporterEdge reporterTwo : edges) {
-                for (ReporterEdge reporterOne : edges) {
-                    if (reporterTwo.getLabel().equals(reporterOne.getLabel())) {
+            for (ReporterEdge reporterOne : edges) {
+                for (ReporterEdge reporterTwo : edges) {
+                    if (reporterOne.getLabel().equals(reporterTwo.getLabel())) {
                         continue;
                     }
 
                     final List<GraphPath<String, ReporterEdge>> one2two = finder.getAllPaths(
-                            reporterTwo.getLabel(), reporterOne.getLabel(), true, null);
-                    final List<GraphPath<String, ReporterEdge>> two2one = finder.getAllPaths(
                             reporterOne.getLabel(), reporterTwo.getLabel(), true, null);
+                    final List<GraphPath<String, ReporterEdge>> two2one = finder.getAllPaths(
+                            reporterTwo.getLabel(), reporterOne.getLabel(), true, null);
 
                     if (one2two.isEmpty() && two2one.isEmpty()) {
                         continue;
                     }
 
-
-                    if (!one2two.isEmpty()) {
-                        candidates.remove(reporterOne);
+                    if (type == Sources.MAXIMAL) {
+                        if (!one2two.isEmpty()) {
+                            candidates.remove(reporterOne);
+                        } else {
+                            candidates.remove(reporterTwo);
+                        }
                     } else {
-                        candidates.remove(reporterTwo);
+                        if (one2two.isEmpty()) {
+                            candidates.remove(reporterOne);
+                        } else {
+                            candidates.remove(reporterTwo);
+                        }
                     }
                 }
             }
 
-            minimalSources.addAll(candidates);
+            sources.addAll(candidates);
         }
 
-        return minimalSources;
+        return sources;
     }
 
     /**
@@ -209,12 +222,22 @@ public final class CredibilityGraph {
      * @param target
      */
     public void reliabilityContraction(String source, String target) {
-        final Set<ReporterEdge> toRemove = minimalSources(source, target);
+        final Set<ReporterEdge> toRemove = getSources(source, target, Sources.MINIMAL);
         graph.removeAllEdges(toRemove);
     }
 
     public void prioritizedRevision(String source, String target, String reporter) {
         reliabilityContraction(target, source);
         expand(source, target, reporter);
+    }
+
+    public void nonPrioritizedRevision(String source, String target, String reporter) {
+        final List<GraphPath<String, ReporterEdge>> paths = findPaths(target, source);
+
+        if (paths.isEmpty()) {
+            expand(source, target, reporter);
+        } else {
+            throw new NotImplementedException();
+        }
     }
 }

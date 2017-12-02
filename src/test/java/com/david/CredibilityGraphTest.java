@@ -48,7 +48,7 @@ public class CredibilityGraphTest {
                 new ReporterEdge("A2", "A4", "B"),
                 new ReporterEdge("A1", "A3", "F1"));
 
-        assertEquals(expected, graph.minimalSources("A1", "A4"));
+        assertEquals(expected, graph.getSources("A1", "A4", CredibilityGraph.Sources.MINIMAL));
     }
 
     @Test
@@ -62,7 +62,7 @@ public class CredibilityGraphTest {
                 new ReporterEdge("B", "D", "4"),
                 new ReporterEdge("C", "D", "3"));
 
-        assertEquals(expected, graph.minimalSources("A", "D"));
+        assertEquals(expected, graph.getSources("A", "D", CredibilityGraph.Sources.MINIMAL));
     }
 
     @Test
@@ -102,5 +102,25 @@ public class CredibilityGraphTest {
         final List<GraphPath<String, ReporterEdge>> pathsAfter = graph.findPaths("A1", "A4");
         assertEquals(4, pathsAfter.size());
         assertEquals(9, graph.graph.edgeSet().size());
+    }
+
+    @Test
+    public void nonPrioritizedRevisionSimpleExpansion() {
+        graph.nonPrioritizedRevision("A4", "F3", "B");
+
+        final List<GraphPath<String, ReporterEdge>> pathsAfter = graph.findPaths("A4", "F3");
+        assertEquals(1, pathsAfter.size());
+        assertEquals(9, graph.graph.edgeSet().size());
+    }
+
+    @Test
+    public void maximalSources() {
+        final Set<ReporterEdge> expected = new HashSet<>();
+        Collections.addAll(expected,
+                new ReporterEdge("A1", "A2", "F1"),
+                new ReporterEdge("A2", "A4", "F3"),
+                new ReporterEdge("A3", "A4", "F2"));
+
+        assertEquals(expected, graph.getSources("A1", "A4", CredibilityGraph.Sources.MAXIMAL));
     }
 }
