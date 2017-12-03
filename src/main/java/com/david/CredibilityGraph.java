@@ -31,7 +31,7 @@ public final class CredibilityGraph {
         MIN, MAX
     }
 
-    protected final Graph<String, ReporterEdge> graph;
+    protected final Graph<String, CredibilityObject> graph;
 
     public CredibilityGraph(String credibilityObjects) {
         graph = merge(parseObjects(credibilityObjects));
@@ -57,9 +57,9 @@ public final class CredibilityGraph {
         return v.visit(tree);
     }
 
-    protected Graph<String, ReporterEdge> merge(Map<String, Graph<String, DefaultEdge>> graphs) {
-        final DirectedMultigraph<String, ReporterEdge> merged = new DirectedMultigraph<>(
-                new ClassBasedEdgeFactory<String, ReporterEdge>(ReporterEdge.class));
+    protected Graph<String, CredibilityObject> merge(Map<String, Graph<String, DefaultEdge>> graphs) {
+        final DirectedMultigraph<String, CredibilityObject> merged = new DirectedMultigraph<>(
+                new ClassBasedEdgeFactory<String, CredibilityObject>(CredibilityObject.class));
 
         for (Map.Entry<String, Graph<String, DefaultEdge>> entry : graphs.entrySet()) {
             final Graph<String, DefaultEdge> graph = entry.getValue();
@@ -72,7 +72,7 @@ public final class CredibilityGraph {
             for (DefaultEdge edge : entry.getValue().edgeSet()) {
                 final String source = graph.getEdgeSource(edge);
                 final String target = graph.getEdgeTarget(edge);
-                merged.addEdge(source, target, new ReporterEdge(source, target, reporter));
+                merged.addEdge(source, target, new CredibilityObject(source, target, reporter));
             }
         }
 
@@ -88,10 +88,10 @@ public final class CredibilityGraph {
      */
     public void exportDOT(String pathName)
             throws ExportException, IOException {
-        final DOTExporter<String, ReporterEdge> exporter = new DOTExporter<>(
+        final DOTExporter<String, CredibilityObject> exporter = new DOTExporter<>(
                 Object::toString,
                 null,
-                ReporterEdge::getLabel);
+                CredibilityObject::getReporter);
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         exporter.exportGraph(graph, baos);
@@ -106,7 +106,7 @@ public final class CredibilityGraph {
     }
 
     protected Map<String, Set<String>> findCycles() {
-        final CycleDetector<String, ReporterEdge> cycleDetector = new CycleDetector<>(graph);
+        final CycleDetector<String, CredibilityObject> cycleDetector = new CycleDetector<>(graph);
         final Map<String, Set<String>> cycleMap = new HashMap<>();
 
         if (cycleDetector.detectCycles()) {
@@ -127,8 +127,8 @@ public final class CredibilityGraph {
      * @param targetVertex
      * @return
      */
-    protected List<GraphPath<String, ReporterEdge>> findPaths(String sourceVertex, String targetVertex) {
-        final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
+    protected List<GraphPath<String, CredibilityObject>> findPaths(String sourceVertex, String targetVertex) {
+        final AllDirectedPaths<String, CredibilityObject> pathFinder = new AllDirectedPaths<>(graph);
         return pathFinder.getAllPaths(sourceVertex, targetVertex,
                 false, graph.edgeSet().size());
     }
@@ -143,12 +143,12 @@ public final class CredibilityGraph {
      * @return
      */
     public boolean expand(String source, String target, String reporter) {
-        final AllDirectedPaths<String, ReporterEdge> pathFinder = new AllDirectedPaths<>(graph);
-        final List<GraphPath<String, ReporterEdge>> paths = pathFinder.getAllPaths(
+        final AllDirectedPaths<String, CredibilityObject> pathFinder = new AllDirectedPaths<>(graph);
+        final List<GraphPath<String, CredibilityObject>> paths = pathFinder.getAllPaths(
                 target, source, true, null);
 
         if (paths.size() == 0) {
-            graph.addEdge(source, target, new ReporterEdge(source, target, reporter));
+            graph.addEdge(source, target, new CredibilityObject(source, target, reporter));
             return true;
         }
 
@@ -164,33 +164,33 @@ public final class CredibilityGraph {
      * @param type
      * @return
      */
-    protected Set<ReporterEdge> getExtremesFromAllPaths(String source, String target, Extreme type) {
-        final List<GraphPath<String, ReporterEdge>> paths = findPaths(source, target);
-        final Set<ReporterEdge> sources = new HashSet<>();
+    protected Set<CredibilityObject> getExtremesFromAllPaths(String source, String target, Extreme type) {
+        final List<GraphPath<String, CredibilityObject>> paths = findPaths(source, target);
+        final Set<CredibilityObject> sources = new HashSet<>();
 
-        for (GraphPath<String, ReporterEdge> path : paths) {
-            final List<ReporterEdge> edges = path.getEdgeList();
-            final Set<ReporterEdge> candidates = getExtremes(edges, type);
+        for (GraphPath<String, CredibilityObject> path : paths) {
+            final List<CredibilityObject> edges = path.getEdgeList();
+            final Set<CredibilityObject> candidates = getExtremes(edges, type);
             sources.addAll(candidates);
         }
 
         return sources;
     }
 
-    protected Set<ReporterEdge> getExtremes(Collection<ReporterEdge> allEdges, Extreme type) {
-        final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(graph);
-        final Set<ReporterEdge> filtered = new HashSet<>(allEdges);
+    protected Set<CredibilityObject> getExtremes(Collection<CredibilityObject> allEdges, Extreme type) {
+        final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph);
+        final Set<CredibilityObject> filtered = new HashSet<>(allEdges);
 
-        for (ReporterEdge one : allEdges) {
-            for (ReporterEdge two : allEdges) {
-                if (one.getLabel().equals(two.getLabel())) {
+        for (CredibilityObject one : allEdges) {
+            for (CredibilityObject two : allEdges) {
+                if (one.getReporter().equals(two.getReporter())) {
                     continue;
                 }
 
-                final List<GraphPath<String, ReporterEdge>> one2two = finder.getAllPaths(
-                        one.getLabel(), two.getLabel(), true, null);
-                final List<GraphPath<String, ReporterEdge>> two2one = finder.getAllPaths(
-                        two.getLabel(), one.getLabel(), true, null);
+                final List<GraphPath<String, CredibilityObject>> one2two = finder.getAllPaths(
+                        one.getReporter(), two.getReporter(), true, null);
+                final List<GraphPath<String, CredibilityObject>> two2one = finder.getAllPaths(
+                        two.getReporter(), one.getReporter(), true, null);
 
                 if (one2two.isEmpty() && two2one.isEmpty()) {
                     continue;
@@ -222,7 +222,7 @@ public final class CredibilityGraph {
      * @param target
      */
     public void reliabilityContraction(String source, String target) {
-        final Set<ReporterEdge> toRemove = getExtremesFromAllPaths(source, target, Extreme.MIN);
+        final Set<CredibilityObject> toRemove = getExtremesFromAllPaths(source, target, Extreme.MIN);
         graph.removeAllEdges(toRemove);
     }
 
@@ -232,23 +232,23 @@ public final class CredibilityGraph {
     }
 
     protected Set<String> reliability(String source, String target) {
-        final Set<ReporterEdge> minimalSources = getExtremesFromAllPaths(source, target, Extreme.MIN);
-        final Set<ReporterEdge> maximalSources = getExtremes(minimalSources, Extreme.MAX);
+        final Set<CredibilityObject> minimalSources = getExtremesFromAllPaths(source, target, Extreme.MIN);
+        final Set<CredibilityObject> maximalSources = getExtremes(minimalSources, Extreme.MAX);
 
-        return maximalSources.stream().map(ReporterEdge::getLabel).collect(Collectors.toSet());
+        return maximalSources.stream().map(CredibilityObject::getReporter).collect(Collectors.toSet());
     }
 
     public void nonPrioritizedRevision(String source, String target, String reporter) {
-        final List<GraphPath<String, ReporterEdge>> paths = findPaths(target, source);
+        final List<GraphPath<String, CredibilityObject>> paths = findPaths(target, source);
 
         if (paths.isEmpty()) {
             expand(source, target, reporter);
         } else {
             final Set<String> reliabilities = reliability(target, source);
-            final AllDirectedPaths<String, ReporterEdge> finder = new AllDirectedPaths<>(graph);
+            final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph);
 
             for (String existingReporter : reliabilities) {
-                final List<GraphPath<String, ReporterEdge>> existing2reporter = finder.getAllPaths(
+                final List<GraphPath<String, CredibilityObject>> existing2reporter = finder.getAllPaths(
                         existingReporter, reporter, true, null);
 
                 if (existing2reporter.isEmpty()) {
