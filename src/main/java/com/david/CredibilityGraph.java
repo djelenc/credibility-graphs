@@ -226,9 +226,9 @@ public final class CredibilityGraph {
         graph.removeAllEdges(toRemove);
     }
 
-    public void prioritizedRevision(String source, String target, String reporter) {
+    public boolean prioritizedRevision(String source, String target, String reporter) {
         reliabilityContraction(target, source);
-        expand(source, target, reporter);
+        return expand(source, target, reporter);
     }
 
     protected Set<String> reliability(String source, String target) {
@@ -238,11 +238,11 @@ public final class CredibilityGraph {
         return maximalSources.stream().map(CredibilityObject::getReporter).collect(Collectors.toSet());
     }
 
-    public void nonPrioritizedRevision(String source, String target, String reporter) {
+    public boolean nonPrioritizedRevision(String source, String target, String reporter) {
         final List<GraphPath<String, CredibilityObject>> paths = findPaths(target, source);
 
         if (paths.isEmpty()) {
-            expand(source, target, reporter);
+            return expand(source, target, reporter);
         } else {
             final Set<String> reliabilities = reliability(target, source);
             final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph);
@@ -253,12 +253,12 @@ public final class CredibilityGraph {
 
                 if (existing2reporter.isEmpty()) {
                     // an existing reporter is either more credible than or incomparable to reporter
-                    return;
+                    return false;
                 }
             }
 
             // all existing reporters are less credible than the new one
-            prioritizedRevision(source, target, reporter);
+            return prioritizedRevision(source, target, reporter);
         }
     }
 }

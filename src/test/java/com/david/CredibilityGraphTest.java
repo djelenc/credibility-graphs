@@ -37,8 +37,9 @@ public class CredibilityGraphTest {
 
     @Test
     public void expansionFailure() {
+        final Set<CredibilityObject> before = graph.graph.edgeSet();
         assertFalse(graph.expand("A4", "A1", "A2"));
-        assertFalse(graph.graph.containsEdge("A4", "A1"));
+        assertEquals(before, graph.graph.edgeSet());
     }
 
     @Test
@@ -68,40 +69,40 @@ public class CredibilityGraphTest {
 
     @Test
     public void reliabilityContraction() {
-        final List<GraphPath<String, CredibilityObject>> pathsBefore = graph.findPaths("A1", "A4");
-        assertEquals(3, pathsBefore.size());
+        final List<GraphPath<String, CredibilityObject>> before = graph.findPaths("A1", "A4");
+        assertEquals(3, before.size());
         assertEquals(8, graph.graph.edgeSet().size());
 
         graph.reliabilityContraction("A1", "A4");
 
-        final List<GraphPath<String, CredibilityObject>> pathsAfter = graph.findPaths("A1", "A4");
-        assertEquals(0, pathsAfter.size());
+        final List<GraphPath<String, CredibilityObject>> after = graph.findPaths("A1", "A4");
+        assertEquals(0, after.size());
         assertEquals(5, graph.graph.edgeSet().size());
     }
 
     @Test
     public void prioritizedRevision() {
-        final List<GraphPath<String, CredibilityObject>> pathsBefore = graph.findPaths("A2", "A1");
-        assertEquals(0, pathsBefore.size());
+        final List<GraphPath<String, CredibilityObject>> before = graph.findPaths("A2", "A1");
+        assertEquals(0, before.size());
         assertEquals(8, graph.graph.edgeSet().size());
 
-        graph.prioritizedRevision("A4", "A1", "F3");
+        assertTrue(graph.prioritizedRevision("A4", "A1", "F3"));
 
-        final List<GraphPath<String, CredibilityObject>> pathsAfter = graph.findPaths("A2", "A1");
-        assertEquals(1, pathsAfter.size());
+        final List<GraphPath<String, CredibilityObject>> after = graph.findPaths("A2", "A1");
+        assertEquals(1, after.size());
         assertEquals(6, graph.graph.edgeSet().size());
     }
 
     @Test
     public void prioritizedRevisionNoRemoval() {
-        final List<GraphPath<String, CredibilityObject>> pathsBefore = graph.findPaths("A1", "A4");
-        assertEquals(3, pathsBefore.size());
+        final List<GraphPath<String, CredibilityObject>> before = graph.findPaths("A1", "A4");
+        assertEquals(3, before.size());
         assertEquals(8, graph.graph.edgeSet().size());
 
-        graph.prioritizedRevision("A1", "A4", "F3");
+        assertTrue(graph.prioritizedRevision("A1", "A4", "F3"));
 
-        final List<GraphPath<String, CredibilityObject>> pathsAfter = graph.findPaths("A1", "A4");
-        assertEquals(4, pathsAfter.size());
+        final List<GraphPath<String, CredibilityObject>> after = graph.findPaths("A1", "A4");
+        assertEquals(4, after.size());
         assertEquals(9, graph.graph.edgeSet().size());
     }
 
@@ -117,7 +118,7 @@ public class CredibilityGraphTest {
     }
 
     @Test
-    public void priority() {
+    public void reliability() {
         final Set<String> expected = new HashSet<>();
         expected.add("F1");
         assertEquals(expected, graph.reliability("A1", "A4"));
@@ -125,10 +126,10 @@ public class CredibilityGraphTest {
 
     @Test
     public void nonPrioritizedRevisionSimpleExpansion() {
-        graph.nonPrioritizedRevision("A4", "F3", "B");
+        assertTrue(graph.nonPrioritizedRevision("A4", "F3", "B"));
 
-        final List<GraphPath<String, CredibilityObject>> pathsAfter = graph.findPaths("A4", "F3");
-        assertEquals(1, pathsAfter.size());
+        final List<GraphPath<String, CredibilityObject>> after = graph.findPaths("A4", "F3");
+        assertEquals(1, after.size());
         assertEquals(9, graph.graph.edgeSet().size());
     }
 
@@ -136,14 +137,14 @@ public class CredibilityGraphTest {
     public void nonPrioritizedRevisionRejection() {
         final List<GraphPath<String, CredibilityObject>> pathsBefore = graph.findPaths("A4", "A1");
 
-        graph.nonPrioritizedRevision("A4", "A1", "B");
+        assertFalse(graph.nonPrioritizedRevision("A4", "A1", "B"));
 
         assertEquals(pathsBefore, graph.findPaths("A4", "A1"));
     }
 
     @Test
     public void nonPrioritizedRevisionMoreCredibleObject() {
-        graph.nonPrioritizedRevision("A4", "A1", "F3");
+        assertTrue(graph.nonPrioritizedRevision("A4", "A1", "F3"));
 
         final Set<CredibilityObject> expected = new HashSet<>();
         Collections.addAll(expected,
@@ -160,7 +161,7 @@ public class CredibilityGraphTest {
     @Test
     public void nonPrioritizedRevisionMoreCredibleObjectMultipleReliabilities() {
         final CredibilityGraph graph = new CredibilityGraph(EXAMPLE13);
-        graph.nonPrioritizedRevision("L", "H", "G");
+        assertTrue(graph.nonPrioritizedRevision("L", "H", "G"));
 
         final Set<CredibilityObject> expected = new HashSet<>();
         Collections.addAll(expected,
