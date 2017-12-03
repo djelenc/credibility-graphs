@@ -48,7 +48,7 @@ public class CredibilityGraphTest {
                 new ReporterEdge("A2", "A4", "B"),
                 new ReporterEdge("A1", "A3", "F1"));
 
-        assertEquals(expected, graph.getSources("A1", "A4", CredibilityGraph.Sources.MINIMAL));
+        assertEquals(expected, graph.getExtremesFromAllPaths("A1", "A4", CredibilityGraph.Extreme.MIN));
     }
 
     @Test
@@ -62,7 +62,7 @@ public class CredibilityGraphTest {
                 new ReporterEdge("B", "D", "4"),
                 new ReporterEdge("C", "D", "3"));
 
-        assertEquals(expected, graph.getSources("A", "D", CredibilityGraph.Sources.MINIMAL));
+        assertEquals(expected, graph.getExtremesFromAllPaths("A", "D", CredibilityGraph.Extreme.MIN));
     }
 
     @Test
@@ -105,6 +105,24 @@ public class CredibilityGraphTest {
     }
 
     @Test
+    public void maximalSources() {
+        final Set<ReporterEdge> expected = new HashSet<>();
+        Collections.addAll(expected,
+                new ReporterEdge("A1", "A2", "F1"),
+                new ReporterEdge("A2", "A4", "F3"),
+                new ReporterEdge("A3", "A4", "F2"));
+
+        assertEquals(expected, graph.getExtremesFromAllPaths("A1", "A4", CredibilityGraph.Extreme.MAX));
+    }
+
+    @Test
+    public void priority() {
+        final Set<String> expected = new HashSet<>();
+        expected.add("F1");
+        assertEquals(expected, graph.reliability("A1", "A4"));
+    }
+
+    @Test
     public void nonPrioritizedRevisionSimpleExpansion() {
         graph.nonPrioritizedRevision("A4", "F3", "B");
 
@@ -114,13 +132,27 @@ public class CredibilityGraphTest {
     }
 
     @Test
-    public void maximalSources() {
+    public void nonPrioritizedRevisionRejection() {
+        final List<GraphPath<String, ReporterEdge>> pathsBefore = graph.findPaths("A4", "A1");
+
+        graph.nonPrioritizedRevision("A4", "A1", "B");
+
+        assertEquals(pathsBefore, graph.findPaths("A4", "A1"));
+    }
+
+    @Test
+    public void nonPrioritizedRevisionMoreCredibleObject() {
+        graph.nonPrioritizedRevision("A4", "A1", "F3");
+
         final Set<ReporterEdge> expected = new HashSet<>();
         Collections.addAll(expected,
-                new ReporterEdge("A1", "A2", "F1"),
                 new ReporterEdge("A2", "A4", "F3"),
-                new ReporterEdge("A3", "A4", "F2"));
+                new ReporterEdge("A4", "A1", "F3"),
+                new ReporterEdge("A3", "A4", "F2"),
+                new ReporterEdge("B", "F1", "F2"),
+                new ReporterEdge("F1", "F2", "F3"),
+                new ReporterEdge("F2", "F3", "B"));
 
-        assertEquals(expected, graph.getSources("A1", "A4", CredibilityGraph.Sources.MAXIMAL));
+        assertEquals(expected, graph.graph.edgeSet());
     }
 }

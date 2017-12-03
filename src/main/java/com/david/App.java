@@ -10,23 +10,23 @@ public final class App {
     static final String OBJECTS_EX5 = "(D,F,J),(D,H,L),(F,G,M),(H,G,M),(G,E,K),(J,K,E),(K,L,G),(L,M,E)";
 
     public static void drawEX2() throws ExportException, IOException {
-        new CredibilityGraph(OBJECTS_EX2).exportDOT("./fig-ex2.png", true);
+        new CredibilityGraph(OBJECTS_EX2).exportDOT("./fig-ex2.png");
     }
 
     public static void drawEX5() throws ExportException, IOException {
-        new CredibilityGraph(OBJECTS_EX5).exportDOT("./fig-ex5.png", true);
+        new CredibilityGraph(OBJECTS_EX5).exportDOT("./fig-ex5.png");
     }
 
     public static void drawContraction() throws ExportException, IOException {
         final CredibilityGraph graph = new CredibilityGraph(OBJECTS_EX2);
         graph.reliabilityContraction("A1", "A4");
-        graph.exportDOT("./fig-ex2-contracted.png", true);
+        graph.exportDOT("./fig-ex2-contracted.png");
     }
 
     public static void drawPrioritizedRevision() throws ExportException, IOException {
         final CredibilityGraph graph = new CredibilityGraph(OBJECTS_EX2);
         graph.prioritizedRevision("A4", "A1", "F3");
-        graph.exportDOT("./fig-ex2-revised.png", true);
+        graph.exportDOT("./fig-ex2-revised.png");
     }
 
     public static void main(String[] args) throws ExportException, IOException {
