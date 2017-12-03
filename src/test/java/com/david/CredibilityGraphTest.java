@@ -9,7 +9,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.david.App.OBJECTS_EX2;
+import static com.david.App.EXAMPLE13;
+import static com.david.App.EXAMPLE2;
 import static org.junit.Assert.*;
 
 public class CredibilityGraphTest {
@@ -18,7 +19,7 @@ public class CredibilityGraphTest {
 
     @Before
     public void setUp() {
-        graph = new CredibilityGraph(OBJECTS_EX2);
+        graph = new CredibilityGraph(EXAMPLE2);
     }
 
     @Test
@@ -152,6 +153,25 @@ public class CredibilityGraphTest {
                 new ReporterEdge("B", "F1", "F2"),
                 new ReporterEdge("F1", "F2", "F3"),
                 new ReporterEdge("F2", "F3", "B"));
+
+        assertEquals(expected, graph.graph.edgeSet());
+    }
+
+    @Test
+    public void nonPrioritizedRevisionMoreCredibleObjectMultipleReliabilities() {
+        final CredibilityGraph graph = new CredibilityGraph(EXAMPLE13);
+        graph.nonPrioritizedRevision("L", "H", "G");
+
+        final Set<ReporterEdge> expected = new HashSet<>();
+        Collections.addAll(expected,
+                new ReporterEdge("F", "G", "D"),
+                new ReporterEdge("J", "K", "E"),
+                new ReporterEdge("D", "F", "E"),
+                new ReporterEdge("E", "G", "F"),
+                new ReporterEdge("H", "J", "G"),
+                new ReporterEdge("I", "L", "G"),
+                new ReporterEdge("D", "E", "G"),
+                new ReporterEdge("L", "H", "G"));
 
         assertEquals(expected, graph.graph.edgeSet());
     }
