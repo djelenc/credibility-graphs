@@ -15,11 +15,9 @@ import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.CycleDetector;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
-import org.jgrapht.graph.ClassBasedEdgeFactory;
-import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
+import org.jgrapht.io.GraphMLExporter;
 
 import java.io.*;
 import java.util.*;
@@ -34,20 +32,10 @@ public final class CredibilityGraph {
     protected final Graph<String, CredibilityObject> graph;
 
     public CredibilityGraph(String credibilityObjects) {
-        graph = merge(parseObjects(credibilityObjects));
+        graph = parseObjects(credibilityObjects);
     }
 
-    protected Map<String, Graph<String, DefaultEdge>> parseObjects(String objects) {
-        final Map<String, Graph<String, DefaultEdge>> graphs = parseStringGraph(objects);
-
-        if (!graphs.containsKey("")) {
-            return graphs;
-        }
-
-        throw new IllegalArgumentException("Invalid objects: " + objects);
-    }
-
-    private static Map<String, Graph<String, DefaultEdge>> parseStringGraph(String graph) {
+    protected Graph<String, CredibilityObject> parseObjects(String graph) {
         final ANTLRInputStream ais = new ANTLRInputStream(graph);
         final GraphLexer lexer = new GraphLexer(ais);
         final CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -57,36 +45,16 @@ public final class CredibilityGraph {
         return v.visit(tree);
     }
 
-    protected Graph<String, CredibilityObject> merge(Map<String, Graph<String, DefaultEdge>> graphs) {
-        final DirectedMultigraph<String, CredibilityObject> merged = new DirectedMultigraph<>(
-                new ClassBasedEdgeFactory<String, CredibilityObject>(CredibilityObject.class));
-
-        for (Map.Entry<String, Graph<String, DefaultEdge>> entry : graphs.entrySet()) {
-            final Graph<String, DefaultEdge> graph = entry.getValue();
-            final String reporter = entry.getKey();
-
-            for (String vertex : graph.vertexSet()) {
-                merged.addVertex(vertex);
-            }
-
-            for (DefaultEdge edge : entry.getValue().edgeSet()) {
-                final String source = graph.getEdgeSource(edge);
-                final String target = graph.getEdgeTarget(edge);
-                merged.addEdge(source, target, new CredibilityObject(source, target, reporter));
-            }
-        }
-
-        return merged;
-    }
-
     /**
-     * Exports given graph into DOT file and invokes the dot-parser to create a PNG image
+     * Exports given graph into DOT format and saves it into file using given format.
+     * The DOT exporter requires the graphviz be installed.
      *
-     * @param pathName
+     * @param fileName
+     * @param format
      * @throws ExportException
      * @throws IOException
      */
-    public void exportDOT(String pathName)
+    public void exportDOT(String fileName, Format format)
             throws ExportException, IOException {
         final DOTExporter<String, CredibilityObject> exporter = new DOTExporter<>(
                 Object::toString,
@@ -101,8 +69,8 @@ public final class CredibilityGraph {
         mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
 
         Graphviz.fromGraph(mutableGraph)
-                .render(Format.PNG)
-                .toFile(new File(pathName));
+                .render(format)
+                .toFile(new File(fileName + "." + format.name().toLowerCase()));
     }
 
     protected Map<String, Set<String>> findCycles() {

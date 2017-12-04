@@ -17,20 +17,4 @@ public interface GraphVisitor<T> extends ParseTreeVisitor<T> {
      * @return the visitor result
      */
     T visitStat(GraphParser.StatContext ctx);
-
-    /**
-     * Visit a parse tree produced by {@link GraphParser#tuples}.
-     *
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    T visitTuples(GraphParser.TuplesContext ctx);
-
-    /**
-     * Visit a parse tree produced by {@link GraphParser#objects}.
-     *
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    T visitObjects(GraphParser.ObjectsContext ctx);
 }
