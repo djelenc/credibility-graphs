@@ -17,7 +17,6 @@ import org.jgrapht.alg.CycleDetector;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
-import org.jgrapht.io.GraphMLExporter;
 
 import java.io.*;
 import java.util.*;
@@ -111,16 +110,19 @@ public final class CredibilityGraph {
      * @return
      */
     public boolean expand(String source, String target, String reporter) {
-        final AllDirectedPaths<String, CredibilityObject> pathFinder = new AllDirectedPaths<>(graph);
-        final List<GraphPath<String, CredibilityObject>> paths = pathFinder.getAllPaths(
-                target, source, true, null);
+        if (graph.containsVertex(source) && graph.containsVertex(target)) {
+            final AllDirectedPaths<String, CredibilityObject> pathFinder = new AllDirectedPaths<>(graph);
+            final List<GraphPath<String, CredibilityObject>> fromTarget2Source = pathFinder.getAllPaths(
+                    target, source, true, null);
 
-        if (paths.size() == 0) {
-            graph.addEdge(source, target, new CredibilityObject(source, target, reporter));
-            return true;
+            if (fromTarget2Source.size() != 0) {
+                return false;
+            }
         }
 
-        return false;
+        graph.addVertex(source);
+        graph.addVertex(target);
+        return graph.addEdge(source, target, new CredibilityObject(source, target, reporter));
     }
 
     /**
@@ -189,13 +191,13 @@ public final class CredibilityGraph {
      * @param source
      * @param target
      */
-    public void reliabilityContraction(String source, String target) {
+    public void contraction(String source, String target) {
         final Set<CredibilityObject> toRemove = getExtremesFromAllPaths(source, target, Extreme.MIN);
         graph.removeAllEdges(toRemove);
     }
 
     public boolean prioritizedRevision(String source, String target, String reporter) {
-        reliabilityContraction(target, source);
+        contraction(target, source);
         return expand(source, target, reporter);
     }
 

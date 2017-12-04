@@ -68,12 +68,12 @@ public class CredibilityGraphTest {
     }
 
     @Test
-    public void reliabilityContraction() {
+    public void contraction() {
         final List<GraphPath<String, CredibilityObject>> before = graph.findPaths("A1", "A4");
         assertEquals(3, before.size());
         assertEquals(8, graph.graph.edgeSet().size());
 
-        graph.reliabilityContraction("A1", "A4");
+        graph.contraction("A1", "A4");
 
         final List<GraphPath<String, CredibilityObject>> after = graph.findPaths("A1", "A4");
         assertEquals(0, after.size());
