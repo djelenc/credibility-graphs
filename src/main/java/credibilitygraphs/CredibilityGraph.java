@@ -1,8 +1,8 @@
-package com.david;
+package credibilitygraphs;
 
-import com.david.parser.GraphLexer;
-import com.david.parser.GraphParser;
-import com.david.parser.Visitor;
+import credibilitygraphs.parser.GraphLexer;
+import credibilitygraphs.parser.GraphParser;
+import credibilitygraphs.parser.Visitor;
 import guru.nidi.graphviz.attribute.RankDir;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;

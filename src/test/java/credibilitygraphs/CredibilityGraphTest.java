@@ -1,4 +1,4 @@
-package com.david;
+package credibilitygraphs;
 
 import org.jgrapht.GraphPath;
 import org.junit.Before;
@@ -9,8 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.david.App.EXAMPLE13;
-import static com.david.App.EXAMPLE2;
 import static org.junit.Assert.*;
 
 public class CredibilityGraphTest {
@@ -19,7 +17,7 @@ public class CredibilityGraphTest {
 
     @Before
     public void setUp() {
-        graph = new CredibilityGraph(EXAMPLE2);
+        graph = new CredibilityGraph(App.EXAMPLE2);
     }
 
     @Test
@@ -160,7 +158,7 @@ public class CredibilityGraphTest {
 
     @Test
     public void nonPrioritizedRevisionMoreCredibleObjectMultipleReliabilities() {
-        final CredibilityGraph graph = new CredibilityGraph(EXAMPLE13);
+        final CredibilityGraph graph = new CredibilityGraph(App.EXAMPLE13);
         assertTrue(graph.nonPrioritizedRevision("L", "H", "G"));
 
         final Set<CredibilityObject> expected = new HashSet<>();

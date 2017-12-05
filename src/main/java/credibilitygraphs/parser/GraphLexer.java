@@ -1,4 +1,4 @@
-package com.david.parser;// Generated from Graph.g4 by ANTLR 4.6
+package credibilitygraphs.parser;// Generated from Graph.g4 by ANTLR 4.6
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.atn.ATN;

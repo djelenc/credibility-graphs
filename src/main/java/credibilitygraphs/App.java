@@ -1,4 +1,4 @@
-package com.david;
+package credibilitygraphs;
 
 import guru.nidi.graphviz.engine.Format;
 import org.jgrapht.io.ExportException;

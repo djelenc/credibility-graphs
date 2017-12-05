@@ -1,6 +1,6 @@
-package com.david.parser;
+package credibilitygraphs.parser;
 
-import com.david.CredibilityObject;
+import credibilitygraphs.CredibilityObject;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
