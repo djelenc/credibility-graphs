@@ -17,6 +17,7 @@ import org.jgrapht.alg.CycleDetector;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
+import org.jgrapht.io.GraphMLExporter;
 
 import java.io.*;
 import java.util.*;
@@ -70,6 +71,21 @@ public final class CredibilityGraph {
         Graphviz.fromGraph(mutableGraph)
                 .render(format)
                 .toFile(new File(fileName + "." + format.name().toLowerCase()));
+    }
+
+    public void exportGraphML(String fileName) throws ExportException, IOException {
+        final GraphMLExporter<String, CredibilityObject> exporter = new GraphMLExporter<>();
+
+        exporter.setVertexIDProvider(Object::toString);
+        exporter.setVertexLabelProvider(Object::toString);
+
+        exporter.setEdgeLabelProvider(CredibilityObject::getReporter);
+        exporter.setEdgeIDProvider(e -> String.valueOf(e.hashCode()));
+
+        exporter.setVertexLabelAttributeName("Text");
+        exporter.setEdgeLabelAttributeName("Text");
+
+        exporter.exportGraph(graph, new File(fileName + ".graphml"));
     }
 
     protected Map<String, Set<String>> findCycles() {

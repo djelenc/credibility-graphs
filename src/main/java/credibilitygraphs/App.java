@@ -45,13 +45,6 @@ public final class App {
     }
 
     public static void main(String[] args) throws ExportException, IOException {
-        // drawEX2();
-        // drawEX5();
-        // drawEX13();
-        // drawNPRevision13();
-        // drawContraction();
-        // drawPrioritizedRevision();
-
         final CredibilityGraph graph = new CredibilityGraph(EXAMPLE2);
         graph.exportDOT("./fig-1", Format.PNG);
 
@@ -69,6 +62,7 @@ public final class App {
 
         final CredibilityGraph graph2 = new CredibilityGraph(EXAMPLE13);
         graph2.exportDOT("./fig-6", Format.PNG);
+        graph2.exportGraphML("./fig-6");
 
         graph2.nonPrioritizedRevision("L", "H", "G");
         graph2.exportDOT("./fig-7-npr-revision", Format.PNG);
