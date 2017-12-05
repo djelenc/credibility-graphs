@@ -55,19 +55,22 @@ public final class App {
         final CredibilityGraph graph = new CredibilityGraph(EXAMPLE2);
         graph.exportDOT("./fig-1", Format.PNG);
 
-        graph.expand("C", "F1", "B");
+        graph.expansion("C", "F1", "B");
         graph.exportDOT("./fig-2-expansion", Format.PNG);
 
         graph.contraction("C", "F1");
         graph.exportDOT("./fig-3-contraction", Format.PNG);
 
-        graph.nonPrioritizedRevision("A4", "A1", "F3");
-        graph.exportDOT("./fig-4-pr-revision", Format.PNG);
+        graph.nonPrioritizedRevision("A4", "A1", "B");
+        graph.exportDOT("./fig-4-npr-revision", Format.PNG);
+
+        graph.prioritizedRevision("A4", "A1", "B");
+        graph.exportDOT("./fig-5-pr-revision", Format.PNG);
 
         final CredibilityGraph graph2 = new CredibilityGraph(EXAMPLE13);
-        graph2.exportDOT("./fig-5", Format.PNG);
+        graph2.exportDOT("./fig-6", Format.PNG);
 
         graph2.nonPrioritizedRevision("L", "H", "G");
-        graph2.exportDOT("./fig-6-npr-revision", Format.PNG);
+        graph2.exportDOT("./fig-7-npr-revision", Format.PNG);
     }
 }

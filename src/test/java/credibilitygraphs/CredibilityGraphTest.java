@@ -28,7 +28,7 @@ public class CredibilityGraphTest {
 
     @Test
     public void expansionSuccess() {
-        assertTrue(graph.expand("A1", "F3", "A2"));
+        assertTrue(graph.expansion("A1", "F3", "A2"));
         assertTrue(graph.graph.containsEdge("A1", "F3"));
         assertEquals("A2", graph.graph.getEdge("A1", "F3").getReporter());
     }
@@ -36,7 +36,7 @@ public class CredibilityGraphTest {
     @Test
     public void expansionFailure() {
         final Set<CredibilityObject> before = graph.graph.edgeSet();
-        assertFalse(graph.expand("A4", "A1", "A2"));
+        assertFalse(graph.expansion("A4", "A1", "A2"));
         assertEquals(before, graph.graph.edgeSet());
     }
 

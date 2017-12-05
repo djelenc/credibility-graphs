@@ -109,7 +109,7 @@ public final class CredibilityGraph {
      * @param reporter
      * @return
      */
-    public boolean expand(String source, String target, String reporter) {
+    public boolean expansion(String source, String target, String reporter) {
         if (graph.containsVertex(source) && graph.containsVertex(target)) {
             final AllDirectedPaths<String, CredibilityObject> pathFinder = new AllDirectedPaths<>(graph);
             final List<GraphPath<String, CredibilityObject>> fromTarget2Source = pathFinder.getAllPaths(
@@ -198,7 +198,7 @@ public final class CredibilityGraph {
 
     public boolean prioritizedRevision(String source, String target, String reporter) {
         contraction(target, source);
-        return expand(source, target, reporter);
+        return expansion(source, target, reporter);
     }
 
     protected Set<String> reliability(String source, String target) {
@@ -212,7 +212,7 @@ public final class CredibilityGraph {
         final List<GraphPath<String, CredibilityObject>> paths = findPaths(target, source);
 
         if (paths.isEmpty()) {
-            return expand(source, target, reporter);
+            return expansion(source, target, reporter);
         } else {
             final Set<String> reliabilities = reliability(target, source);
             final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph);
