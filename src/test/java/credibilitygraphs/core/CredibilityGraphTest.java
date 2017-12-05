@@ -1,5 +1,6 @@
-package credibilitygraphs;
+package credibilitygraphs.core;
 
+import credibilitygraphs.App;
 import org.jgrapht.GraphPath;
 import org.junit.Before;
 import org.junit.Test;

@@ -1,4 +1,4 @@
-package credibilitygraphs;
+package credibilitygraphs.core;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;

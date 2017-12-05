@@ -1,4 +1,4 @@
-package credibilitygraphs;
+package credibilitygraphs.core;
 
 import org.jgrapht.graph.DefaultEdge;
 

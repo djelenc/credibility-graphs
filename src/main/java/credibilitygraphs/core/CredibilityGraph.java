@@ -1,4 +1,4 @@
-package credibilitygraphs;
+package credibilitygraphs.core;
 
 import credibilitygraphs.parser.GraphLexer;
 import credibilitygraphs.parser.GraphParser;
