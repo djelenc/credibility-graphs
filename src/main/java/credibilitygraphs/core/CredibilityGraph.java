@@ -13,7 +13,8 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
-import org.jgrapht.alg.CycleDetector;
+import org.jgrapht.alg.cycle.DirectedSimpleCycles;
+import org.jgrapht.alg.cycle.HawickJamesSimpleCycles;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
@@ -97,19 +98,33 @@ public final class CredibilityGraph {
 
     }
 
-    protected Map<String, Set<String>> findCycles() {
-        final CycleDetector<String, CredibilityObject> cycleDetector = new CycleDetector<>(graph);
-        final Map<String, Set<String>> cycleMap = new HashMap<>();
+    /**
+     * FIXME: What is there are multiple edgs between two vertices?
+     *
+     * @param cycle
+     * @return
+     */
+    protected List<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
+        final Iterator<String> iterator = cycle.iterator();
 
-        if (cycleDetector.detectCycles()) {
-            final Set<String> cycles = cycleDetector.findCycles();
+        final List<CredibilityObject> edges = new ArrayList<>();
 
-            for (String cycle : cycles) {
-                cycleMap.put(cycle, cycleDetector.findCyclesContainingVertex(cycle));
-            }
+        while (iterator.hasNext()) {
+            final String source = iterator.next();
+            final String target = iterator.next();
+            final CredibilityObject edge = graph.getEdge(source, target);
+            edges.add(edge);
         }
 
-        return cycleMap;
+        return edges;
+    }
+
+    public void findCycles() {
+        final DirectedSimpleCycles<String, CredibilityObject> cycler = new HawickJamesSimpleCycles<>(graph);
+
+        for (List<String> cycle : cycler.findSimpleCycles()) {
+            System.out.println(getEdgesFromCycle(cycle));
+        }
     }
 
     /**
@@ -254,6 +269,14 @@ public final class CredibilityGraph {
 
             // all existing reporters are less credible than the new one
             return prioritizedRevision(source, target, reporter);
+        }
+    }
+
+    public void merge(CredibilityGraph input) {
+        for (CredibilityObject object : input.graph.edgeSet()) {
+            graph.addVertex(object.getSrc());
+            graph.addVertex(object.getTgt());
+            graph.addEdge(object.getSrc(), object.getTgt(), object);
         }
     }
 }
