@@ -105,16 +105,23 @@ public final class CredibilityGraph {
      * @return
      */
     protected List<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
-        final Iterator<String> iterator = cycle.iterator();
+        // the list appears to be reversed
+        final List<String> reversedCycle = cycle.subList(0, cycle.size());
+        Collections.reverse(reversedCycle);
 
         final List<CredibilityObject> edges = new ArrayList<>();
+        final Iterator<String> iterator = reversedCycle.iterator();
+
+        String next = iterator.next();
+        String previous;
 
         while (iterator.hasNext()) {
-            final String source = iterator.next();
-            final String target = iterator.next();
-            final CredibilityObject edge = graph.getEdge(source, target);
-            edges.add(edge);
+            previous = next;
+            next = iterator.next();
+            edges.add(graph.getEdge(previous, next));
         }
+
+        edges.add(graph.getEdge(next, reversedCycle.get(0)));
 
         return edges;
     }
@@ -123,7 +130,9 @@ public final class CredibilityGraph {
         final DirectedSimpleCycles<String, CredibilityObject> cycler = new HawickJamesSimpleCycles<>(graph);
 
         for (List<String> cycle : cycler.findSimpleCycles()) {
-            System.out.println(getEdgesFromCycle(cycle));
+            final List<CredibilityObject> edges = getEdgesFromCycle(cycle);
+            final Set<CredibilityObject> leastCredible = getExtremes(edges, Extreme.MIN);
+            System.out.printf("%s: remove: %s%n", edges, leastCredible);
         }
     }
 
