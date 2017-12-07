@@ -55,14 +55,18 @@ public final class CredibilityGraph {
      * @throws IOException
      */
     public void exportDOT(String fileName, Format format)
-            throws ExportException, IOException {
+            throws IOException {
         final DOTExporter<String, CredibilityObject> exporter = new DOTExporter<>(
                 Object::toString,
                 null,
                 CredibilityObject::getReporter);
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exporter.exportGraph(graph, baos);
+        try {
+            exporter.exportGraph(graph, baos);
+        } catch (ExportException e) {
+            throw new IOException(e);
+        }
         final InputStream is = new ByteArrayInputStream(baos.toByteArray());
 
         final MutableGraph mutableGraph = Parser.read(is);
@@ -73,7 +77,7 @@ public final class CredibilityGraph {
                 .toFile(new File(fileName + "." + format.name().toLowerCase()));
     }
 
-    public void exportGraphML(String fileName) throws ExportException, IOException {
+    public void exportGraphML(String fileName) throws IOException {
         final GraphMLExporter<String, CredibilityObject> exporter = new GraphMLExporter<>();
 
         exporter.setVertexIDProvider(Object::toString);
@@ -85,7 +89,12 @@ public final class CredibilityGraph {
         exporter.setVertexLabelAttributeName("Text");
         exporter.setEdgeLabelAttributeName("Text");
 
-        exporter.exportGraph(graph, new File(fileName + ".graphml"));
+        try {
+            exporter.exportGraph(graph, new File(fileName + ".graphml"));
+        } catch (ExportException e) {
+            throw new IOException(e);
+        }
+
     }
 
     protected Map<String, Set<String>> findCycles() {

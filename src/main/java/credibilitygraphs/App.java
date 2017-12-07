@@ -2,7 +2,6 @@ package credibilitygraphs;
 
 import credibilitygraphs.core.CredibilityGraph;
 import guru.nidi.graphviz.engine.Format;
-import org.jgrapht.io.ExportException;
 
 import java.io.IOException;
 
@@ -15,7 +14,7 @@ public final class App {
     public static final String EXAMPLE13 = "(H,I,F),(H,L,D),(H,J,G),(I,L,G),(J,L,E),(J,L,F),(J,K,D)," +
             "(J,K,E),(K,L,D),(D,E,G),(D,F,E),(E,G,F),(F,G,D)";
 
-    public static void main(String[] args) throws ExportException, IOException {
+    public static void main(String[] args) throws IOException {
         final CredibilityGraph graph = new CredibilityGraph(EXAMPLE2);
         graph.exportDOT("./fig-1", Format.PNG);
 
