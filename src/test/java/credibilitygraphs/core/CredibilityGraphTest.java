@@ -194,19 +194,20 @@ public class CredibilityGraphTest {
     }
 
     @Test
-    public void getEdgesFromCycle() {
+    public void verticesToEdgesInCycle() {
         // add cycle (F3, F1, F2)
         graph.graph.addEdge("F3", "F1", new CredibilityObject("F3", "F1", "F2"));
 
         final DirectedSimpleCycles<String, CredibilityObject> cycleFinder = new HawickJamesSimpleCycles<>(graph.graph);
         final List<List<String>> cycles = cycleFinder.findSimpleCycles();
+        cycles.forEach(Collections::reverse);
         assertEquals(1, cycles.size());
 
-        final Set<CredibilityObject> actualEdges = graph.getEdgesFromCycle(cycles.get(0));
-        final Set<CredibilityObject> expectedEdges = new HashSet<>();
+        final List<CredibilityObject> actualEdges = graph.cycleVertices2CycleEdges(cycles.get(0));
+        final List<CredibilityObject> expectedEdges = new ArrayList<>();
         Collections.addAll(expectedEdges,
-                new CredibilityObject("F2", "F3", "B"),
                 new CredibilityObject("F1", "F2", "F3"),
+                new CredibilityObject("F2", "F3", "B"),
                 new CredibilityObject("F3", "F1", "F2"));
         assertEquals(expectedEdges, actualEdges);
     }
@@ -215,26 +216,26 @@ public class CredibilityGraphTest {
     public void getEdgesNoCycle1() {
         // no edge F3-F1, thus no cycle
         final List<String> vertices = Arrays.asList("F1", "F2", "F3");
-        graph.getEdgesFromCycle(vertices);
+        graph.cycleVertices2CycleEdges(vertices);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void getEdgesNoCycle2() {
         // no edge F1-F3
         final List<String> vertices = Arrays.asList("F1", "F3");
-        graph.getEdgesFromCycle(vertices);
+        graph.cycleVertices2CycleEdges(vertices);
     }
 
     @Test
     public void findMinimumCycles() {
         final CredibilityGraph function = new CredibilityGraph("(A, B, X), (B, C, Y), (C, A, Y)");
 
-        final List<Set<CredibilityObject>> cycles = function.findCycles();
+        final List<List<CredibilityObject>> cycles = function.findCycles();
 
         assertEquals(1, cycles.size());
-        final Set<CredibilityObject> actual = cycles.iterator().next();
+        final List<CredibilityObject> actual = cycles.get(0);
 
-        final Set<CredibilityObject> expected = new HashSet<>();
+        final List<CredibilityObject> expected = new ArrayList<>();
         Collections.addAll(expected,
                 new CredibilityObject("A", "B", "X"),
                 new CredibilityObject("B", "C", "Y"),

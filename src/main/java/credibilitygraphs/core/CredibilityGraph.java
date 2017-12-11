@@ -41,6 +41,12 @@ public final class CredibilityGraph {
         graph = parseObjects(credibilityObjects);
     }
 
+    /**
+     * Parses given string of credibility objects and returns a directed multi graph
+     *
+     * @param graph
+     * @return
+     */
     protected Graph<String, CredibilityObject> parseObjects(String graph) {
         final ANTLRInputStream ais = new ANTLRInputStream(graph);
         final GraphLexer lexer = new GraphLexer(ais);
@@ -67,22 +73,28 @@ public final class CredibilityGraph {
                 null,
                 CredibilityObject::getReporter);
 
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try {
-            exporter.exportGraph(graph, baos);
+            exporter.exportGraph(graph, stream);
         } catch (ExportException e) {
             throw new IOException(e);
         }
-        final InputStream is = new ByteArrayInputStream(baos.toByteArray());
 
+        final InputStream is = new ByteArrayInputStream(stream.toByteArray());
         final MutableGraph mutableGraph = Parser.read(is);
         mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP);
-
         Graphviz.fromGraph(mutableGraph)
                 .render(format)
                 .toFile(new File(fileName + "." + format.name().toLowerCase()));
     }
 
+    /**
+     * Exports given graph into GraphML format and saves it into file with
+     * .graphml extension.
+     *
+     * @param fileName
+     * @throws IOException
+     */
     public void exportGraphML(String fileName) throws IOException {
         final GraphMLExporter<String, CredibilityObject> exporter = new GraphMLExporter<>();
 
@@ -104,7 +116,7 @@ public final class CredibilityGraph {
     }
 
     /**
-     * Finds all paths in given graph between given source and target vertex
+     * Finds all paths between given source and target vertex
      *
      * @param sourceVertex
      * @param targetVertex
@@ -176,14 +188,16 @@ public final class CredibilityGraph {
     }
 
     /**
-     * Find extremes, defined in type, in a collection of CredibilityObjects, using graph to measure credibility
+     * Find extremes, defined in type, in a collection of CredibilityObjects,
+     * using graph to measure reliability
      *
      * @param allEdges
      * @param type
      * @param graph
      * @return
      */
-    protected Set<CredibilityObject> getExtremes(Collection<CredibilityObject> allEdges, Extreme type, Graph<String, CredibilityObject> graph) {
+    protected Set<CredibilityObject> getExtremes(Collection<CredibilityObject> allEdges, Extreme type,
+                                                 Graph<String, CredibilityObject> graph) {
         final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph);
         final Set<CredibilityObject> filtered = new HashSet<>(allEdges);
 
@@ -232,11 +246,29 @@ public final class CredibilityGraph {
         graph.removeAllEdges(toRemove);
     }
 
+    /**
+     * Add the provided credibility tuple to the knowledge-base, and assure the latter
+     * is consistent
+     *
+     * @param source
+     * @param target
+     * @param reporter
+     * @return
+     */
     public boolean prioritizedRevision(String source, String target, String reporter) {
         contraction(target, source);
         return expansion(source, target, reporter);
     }
 
+    /**
+     * Estimate th reliability of source being less credible than the target.
+     * The reliability is denoted with the set of least reliable reporters
+     * that claim the source is less credible than the target.
+     *
+     * @param source
+     * @param target
+     * @return
+     */
     protected Set<String> reliability(String source, String target) {
         final Set<CredibilityObject> minimalSources = getExtremesFromAllPaths(source, target, Extreme.MIN);
         final Set<CredibilityObject> maximalSources = getExtremes(minimalSources, Extreme.MAX);
@@ -244,6 +276,20 @@ public final class CredibilityGraph {
         return maximalSources.stream().map(CredibilityObject::getReporter).collect(Collectors.toSet());
     }
 
+    /**
+     * Revise the knowledge-base by trying to add given credibility object.
+     * <p>
+     * The revision succeeds iff:</ul>
+     * <li>it does not contradict current knowledge-base, or</li>
+     * <li>it contradicts the current knowledge-base but the reliability of the
+     * new information is higher than the one in the knowledge-base.</li>
+     * </ul>
+     *
+     * @param source
+     * @param target
+     * @param reporter
+     * @return
+     */
     public boolean nonPrioritizedRevision(String source, String target, String reporter) {
         final List<GraphPath<String, CredibilityObject>> paths = findPaths(target, source);
 
@@ -268,11 +314,16 @@ public final class CredibilityGraph {
         }
     }
 
+    /**
+     * Merge the current knowledge-base with provided one.
+     *
+     * @param input
+     */
     public void merge(CredibilityGraph input) {
-        // make a backup to resolve cycles
+        // make a backup for resolving cycles later
         final CredibilityGraph old = copy();
 
-        // copy all vertices and edges into this graph
+        // copy all vertices and edges from input into this graph
         input.graph.edgeSet().forEach(edge -> {
             this.graph.addVertex(edge.getSrc());
             this.graph.addVertex(edge.getTgt());
@@ -281,8 +332,8 @@ public final class CredibilityGraph {
 
         // in every cycle, remove the least reliable edge
         findCycles().forEach(cycle -> {
-            final Set<CredibilityObject> leastCredible = getExtremes(cycle, Extreme.MIN, old.graph);
-            graph.removeAllEdges(leastCredible);
+            final Set<CredibilityObject> leastReliable = getExtremes(cycle, Extreme.MIN, old.graph);
+            graph.removeAllEdges(leastReliable);
         });
     }
 
@@ -305,16 +356,14 @@ public final class CredibilityGraph {
     }
 
     /**
-     * Returns a set of edges from a given list of vertices that represent a cycle
+     * Maps given sequence of vertices that represent a cycle into a
+     * sequence of edges that represent the same cycle
      *
      * @param cycle
      * @return
      */
-    protected Set<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
-        // the list of vertices representing the cycle is reversed
-        Collections.reverse(cycle);
-
-        final Set<CredibilityObject> edges = new HashSet<>();
+    protected List<CredibilityObject> cycleVertices2CycleEdges(List<String> cycle) {
+        final List<CredibilityObject> edges = new ArrayList<>();
         final Iterator<String> iterator = cycle.iterator();
 
         String next = iterator.next();
@@ -343,9 +392,15 @@ public final class CredibilityGraph {
         return edges;
     }
 
-
-    protected List<Set<CredibilityObject>> findCycles() {
+    /**
+     * Finds all minimal cycles in current knowledge-base
+     *
+     * @return
+     */
+    protected List<List<CredibilityObject>> findCycles() {
         final DirectedSimpleCycles<String, CredibilityObject> algorithm = new HawickJamesSimpleCycles<>(graph);
-        return algorithm.findSimpleCycles().stream().map(this::getEdgesFromCycle).collect(Collectors.toList());
+        final List<List<String>> cycles = algorithm.findSimpleCycles();
+        cycles.forEach(Collections::reverse); // cycles are in reverse order
+        return cycles.stream().map(this::cycleVertices2CycleEdges).collect(Collectors.toList());
     }
 }
