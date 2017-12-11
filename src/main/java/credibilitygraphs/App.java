@@ -39,17 +39,15 @@ public final class App {
     }
 
     public static void main(String[] args) throws IOException {
-        final CredibilityGraph graph1 = new CredibilityGraph(
+        final CredibilityGraph graph = new CredibilityGraph(
                 "(A, E, B), (D, B, A), (C, A, D), (B, A, E)");
-        //graph1.exportDOT("./g1", Format.PNG);
+        graph.exportDOT("./g1", Format.PNG);
 
-        final CredibilityGraph graph2 = new CredibilityGraph(
+        final CredibilityGraph newGraph = new CredibilityGraph(
                 "(A, C, E), (C, D, B)");
-        //graph2.exportDOT("./g2", Format.PNG);
+        newGraph.exportDOT("./g2", Format.PNG);
 
-        graph1.merge(graph2);
-        //graph1.exportDOT("./merged", Format.PNG);
-
-        graph1.findCycles();
+        graph.merge(newGraph);
+        graph.exportDOT("./merged", Format.PNG);
     }
 }

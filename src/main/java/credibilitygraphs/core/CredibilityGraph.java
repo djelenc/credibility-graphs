@@ -16,6 +16,7 @@ import org.jgrapht.GraphPath;
 import org.jgrapht.alg.cycle.DirectedSimpleCycles;
 import org.jgrapht.alg.cycle.HawickJamesSimpleCycles;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
+import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.GraphMLExporter;
@@ -31,6 +32,10 @@ public final class CredibilityGraph {
     }
 
     protected final Graph<String, CredibilityObject> graph;
+
+    private CredibilityGraph(Graph<String, CredibilityObject> graph) {
+        this.graph = graph;
+    }
 
     public CredibilityGraph(String credibilityObjects) {
         graph = parseObjects(credibilityObjects);
@@ -99,44 +104,6 @@ public final class CredibilityGraph {
     }
 
     /**
-     * FIXME: What is there are multiple edgs between two vertices?
-     *
-     * @param cycle
-     * @return
-     */
-    protected List<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
-        // the list appears to be reversed
-        final List<String> reversedCycle = cycle.subList(0, cycle.size());
-        Collections.reverse(reversedCycle);
-
-        final List<CredibilityObject> edges = new ArrayList<>();
-        final Iterator<String> iterator = reversedCycle.iterator();
-
-        String next = iterator.next();
-        String previous;
-
-        while (iterator.hasNext()) {
-            previous = next;
-            next = iterator.next();
-            edges.add(graph.getEdge(previous, next));
-        }
-
-        edges.add(graph.getEdge(next, reversedCycle.get(0)));
-
-        return edges;
-    }
-
-    public void findCycles() {
-        final DirectedSimpleCycles<String, CredibilityObject> cycler = new HawickJamesSimpleCycles<>(graph);
-
-        for (List<String> cycle : cycler.findSimpleCycles()) {
-            final List<CredibilityObject> edges = getEdgesFromCycle(cycle);
-            final Set<CredibilityObject> leastCredible = getExtremes(edges, Extreme.MIN);
-            System.out.printf("%s: remove: %s%n", edges, leastCredible);
-        }
-    }
-
-    /**
      * Finds all paths in given graph between given source and target vertex
      *
      * @param sourceVertex
@@ -196,7 +163,27 @@ public final class CredibilityGraph {
         return sources;
     }
 
+
+    /**
+     * Find extremes, defined in type, in a collection of CredibilityObjects
+     *
+     * @param allEdges
+     * @param type
+     * @return
+     */
     protected Set<CredibilityObject> getExtremes(Collection<CredibilityObject> allEdges, Extreme type) {
+        return getExtremes(allEdges, type, graph);
+    }
+
+    /**
+     * Find extremes, defined in type, in a collection of CredibilityObjects, using graph to measure credibility
+     *
+     * @param allEdges
+     * @param type
+     * @param graph
+     * @return
+     */
+    protected Set<CredibilityObject> getExtremes(Collection<CredibilityObject> allEdges, Extreme type, Graph<String, CredibilityObject> graph) {
         final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph);
         final Set<CredibilityObject> filtered = new HashSet<>(allEdges);
 
@@ -282,10 +269,79 @@ public final class CredibilityGraph {
     }
 
     public void merge(CredibilityGraph input) {
+        final CredibilityGraph old = copy();
+
         for (CredibilityObject object : input.graph.edgeSet()) {
             graph.addVertex(object.getSrc());
             graph.addVertex(object.getTgt());
             graph.addEdge(object.getSrc(), object.getTgt(), object);
         }
+
+        final List<Set<CredibilityObject>> cycles = findMinimumCycles(old.graph);
+
+        for (Set<CredibilityObject> cycle : cycles) {
+            graph.removeAllEdges(cycle);
+        }
+    }
+
+    /**
+     * Creates a copy of this CredibilityGraph
+     *
+     * @return
+     */
+    public CredibilityGraph copy() {
+        final Graph<String, CredibilityObject> newGraph = new DirectedMultigraph<>(CredibilityObject.class);
+
+        for (CredibilityObject o : graph.edgeSet()) {
+            newGraph.addVertex(o.getSrc());
+            newGraph.addVertex(o.getTgt());
+            newGraph.addEdge(o.getSrc(), o.getTgt(),
+                    new CredibilityObject(o.getSrc(), o.getTgt(), o.getReporter()));
+        }
+
+        return new CredibilityGraph(newGraph);
+    }
+
+    /**
+     * FIXME: What is there are multiple edges between two vertices?
+     *
+     * @param cycle
+     * @return
+     */
+    protected List<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
+        // the list appears to be reversed
+        final List<String> reversedCycle = cycle.subList(0, cycle.size());
+        Collections.reverse(reversedCycle);
+
+        final List<CredibilityObject> edges = new ArrayList<>();
+        final Iterator<String> iterator = reversedCycle.iterator();
+
+        String next = iterator.next();
+        String previous;
+
+        while (iterator.hasNext()) {
+            previous = next;
+            next = iterator.next();
+            edges.add(graph.getEdge(previous, next));
+        }
+
+        edges.add(graph.getEdge(next, reversedCycle.get(0)));
+
+        return edges;
+    }
+
+
+    protected List<Set<CredibilityObject>> findMinimumCycles(Graph<String, CredibilityObject> graph) {
+        final DirectedSimpleCycles<String, CredibilityObject> cycler = new HawickJamesSimpleCycles<>(this.graph);
+
+        final List<Set<CredibilityObject>> minimumCycles = new ArrayList<>();
+
+        for (List<String> cycle : cycler.findSimpleCycles()) {
+            final List<CredibilityObject> edges = getEdgesFromCycle(cycle);
+            final Set<CredibilityObject> leastCredible = getExtremes(edges, Extreme.MIN, graph);
+            minimumCycles.add(leastCredible);
+        }
+
+        return minimumCycles;
     }
 }
