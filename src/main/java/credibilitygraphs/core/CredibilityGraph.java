@@ -277,10 +277,11 @@ public final class CredibilityGraph {
             graph.addEdge(object.getSrc(), object.getTgt(), object);
         }
 
-        final List<Set<CredibilityObject>> cycles = findMinimumCycles(old.graph);
+        final List<Set<CredibilityObject>> cycles = findMinimumCycles();
 
         for (Set<CredibilityObject> cycle : cycles) {
-            graph.removeAllEdges(cycle);
+            final Set<CredibilityObject> leastCredible = getExtremes(cycle, Extreme.MIN, old.graph);
+            graph.removeAllEdges(leastCredible);
         }
     }
 
@@ -303,17 +304,17 @@ public final class CredibilityGraph {
     }
 
     /**
-     * FIXME: What is there are multiple edges between two vertices?
+     * Returns a set of edges from a given list of vertices that represent a cycle
      *
      * @param cycle
      * @return
      */
-    protected List<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
+    protected Set<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
         // the list appears to be reversed
         final List<String> reversedCycle = cycle.subList(0, cycle.size());
         Collections.reverse(reversedCycle);
 
-        final List<CredibilityObject> edges = new ArrayList<>();
+        final Set<CredibilityObject> edges = new HashSet<>();
         final Iterator<String> iterator = reversedCycle.iterator();
 
         String next = iterator.next();
@@ -322,24 +323,35 @@ public final class CredibilityGraph {
         while (iterator.hasNext()) {
             previous = next;
             next = iterator.next();
-            edges.add(graph.getEdge(previous, next));
+            final CredibilityObject edge = graph.getEdge(previous, next);
+
+            if (edge == null) {
+                throw new IllegalArgumentException(String.format("%s is not a cycle", cycle));
+            }
+
+            edges.add(edge);
         }
 
-        edges.add(graph.getEdge(next, reversedCycle.get(0)));
+        final CredibilityObject cycleEdge = graph.getEdge(next, reversedCycle.get(0));
+
+        if (cycleEdge == null) {
+            throw new IllegalArgumentException(String.format("%s is not a cycle", cycle));
+        }
+
+        edges.add(cycleEdge);
 
         return edges;
     }
 
 
-    protected List<Set<CredibilityObject>> findMinimumCycles(Graph<String, CredibilityObject> graph) {
-        final DirectedSimpleCycles<String, CredibilityObject> cycler = new HawickJamesSimpleCycles<>(this.graph);
+    protected List<Set<CredibilityObject>> findMinimumCycles() {
+        final DirectedSimpleCycles<String, CredibilityObject> algorithm = new HawickJamesSimpleCycles<>(graph);
 
         final List<Set<CredibilityObject>> minimumCycles = new ArrayList<>();
 
-        for (List<String> cycle : cycler.findSimpleCycles()) {
-            final List<CredibilityObject> edges = getEdgesFromCycle(cycle);
-            final Set<CredibilityObject> leastCredible = getExtremes(edges, Extreme.MIN, graph);
-            minimumCycles.add(leastCredible);
+        for (List<String> cycle : algorithm.findSimpleCycles()) {
+            final Set<CredibilityObject> edges = getEdgesFromCycle(cycle);
+            minimumCycles.add(edges);
         }
 
         return minimumCycles;

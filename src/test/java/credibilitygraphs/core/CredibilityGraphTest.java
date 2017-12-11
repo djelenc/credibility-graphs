@@ -2,13 +2,12 @@ package credibilitygraphs.core;
 
 import credibilitygraphs.App;
 import org.jgrapht.GraphPath;
+import org.jgrapht.alg.cycle.DirectedSimpleCycles;
+import org.jgrapht.alg.cycle.HawickJamesSimpleCycles;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -174,5 +173,88 @@ public class CredibilityGraphTest {
                 new CredibilityObject("L", "H", "G"));
 
         assertEquals(expected, graph.graph.edgeSet());
+    }
+
+    @Test
+    public void copy() {
+        final CredibilityGraph graph1 = new CredibilityGraph(App.EXAMPLE2);
+        final CredibilityGraph graph2 = graph1.copy();
+
+        final Set<CredibilityObject> edges1 = graph1.graph.edgeSet();
+        final Set<CredibilityObject> edges2 = graph2.graph.edgeSet();
+
+        assertEquals(edges1, edges2);
+        assertNotSame(edges1, edges2);
+
+        final CredibilityObject edge = edges1.iterator().next();
+        graph1.graph.removeEdge(edge);
+
+        assertFalse(graph1.graph.containsEdge(edge));
+        assertTrue(graph2.graph.containsEdge(edge));
+    }
+
+    @Test
+    public void getEdgesFromCycle() {
+        // add cycle (F3, F1, F2)
+        graph.graph.addEdge("F3", "F1", new CredibilityObject("F3", "F1", "F2"));
+
+        final DirectedSimpleCycles<String, CredibilityObject> cycleFinder = new HawickJamesSimpleCycles<>(graph.graph);
+        final List<List<String>> cycles = cycleFinder.findSimpleCycles();
+        assertEquals(1, cycles.size());
+
+        final Set<CredibilityObject> actualEdges = graph.getEdgesFromCycle(cycles.get(0));
+        final Set<CredibilityObject> expectedEdges = new HashSet<>();
+        Collections.addAll(expectedEdges,
+                new CredibilityObject("F2", "F3", "B"),
+                new CredibilityObject("F1", "F2", "F3"),
+                new CredibilityObject("F3", "F1", "F2"));
+        assertEquals(expectedEdges, actualEdges);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getEdgesNoCycle1() {
+        // no edge F3-F1, thus no cycle
+        final List<String> vertices = Arrays.asList("F1", "F2", "F3");
+        graph.getEdgesFromCycle(vertices);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getEdgesNoCycle2() {
+        // no edge F1-F3
+        final List<String> vertices = Arrays.asList("F1", "F3");
+        graph.getEdgesFromCycle(vertices);
+    }
+
+    @Test
+    public void findMinimumCycles() {
+        final CredibilityGraph function = new CredibilityGraph("(A, B, X), (B, C, Y), (C, A, Y)");
+
+        final List<Set<CredibilityObject>> cycles = function.findMinimumCycles();
+
+        assertEquals(1, cycles.size());
+        final Set<CredibilityObject> actual = cycles.iterator().next();
+
+        final Set<CredibilityObject> expected = new HashSet<>();
+        Collections.addAll(expected,
+                new CredibilityObject("A", "B", "X"),
+                new CredibilityObject("B", "C", "Y"),
+                new CredibilityObject("C", "A", "Y"));
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void cycleFinderAssureMinimal() {
+        final CredibilityGraph function = new CredibilityGraph("(A, B, X), (B, C, Y), (C, A, Y), (B, A, Y)");
+
+        final List<Set<CredibilityObject>> cycles = function.findMinimumCycles();
+
+        assertEquals(1, cycles.size());
+        final Set<CredibilityObject> actual = cycles.iterator().next();
+
+        final Set<CredibilityObject> expected = new HashSet<>();
+        Collections.addAll(expected,
+                new CredibilityObject("A", "B", "X"),
+                new CredibilityObject("B", "A", "Y"));
+        assertEquals(expected, actual);
     }
 }
