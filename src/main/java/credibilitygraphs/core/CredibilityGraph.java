@@ -269,20 +269,21 @@ public final class CredibilityGraph {
     }
 
     public void merge(CredibilityGraph input) {
+        // make a backup to resolve cycles
         final CredibilityGraph old = copy();
 
-        for (CredibilityObject object : input.graph.edgeSet()) {
-            graph.addVertex(object.getSrc());
-            graph.addVertex(object.getTgt());
-            graph.addEdge(object.getSrc(), object.getTgt(), object);
-        }
+        // copy all vertices and edges into this graph
+        input.graph.edgeSet().forEach(edge -> {
+            this.graph.addVertex(edge.getSrc());
+            this.graph.addVertex(edge.getTgt());
+            this.graph.addEdge(edge.getSrc(), edge.getTgt(), edge);
+        });
 
-        final List<Set<CredibilityObject>> cycles = findMinimumCycles();
-
-        for (Set<CredibilityObject> cycle : cycles) {
+        // in every cycle, remove the least reliable edge
+        findCycles().forEach(cycle -> {
             final Set<CredibilityObject> leastCredible = getExtremes(cycle, Extreme.MIN, old.graph);
             graph.removeAllEdges(leastCredible);
-        }
+        });
     }
 
     /**
@@ -293,12 +294,12 @@ public final class CredibilityGraph {
     public CredibilityGraph copy() {
         final Graph<String, CredibilityObject> newGraph = new DirectedMultigraph<>(CredibilityObject.class);
 
-        for (CredibilityObject o : graph.edgeSet()) {
-            newGraph.addVertex(o.getSrc());
-            newGraph.addVertex(o.getTgt());
-            newGraph.addEdge(o.getSrc(), o.getTgt(),
-                    new CredibilityObject(o.getSrc(), o.getTgt(), o.getReporter()));
-        }
+        graph.edgeSet().forEach(edge -> {
+            newGraph.addVertex(edge.getSrc());
+            newGraph.addVertex(edge.getTgt());
+            newGraph.addEdge(edge.getSrc(), edge.getTgt(),
+                    new CredibilityObject(edge.getSrc(), edge.getTgt(), edge.getReporter()));
+        });
 
         return new CredibilityGraph(newGraph);
     }
@@ -310,12 +311,11 @@ public final class CredibilityGraph {
      * @return
      */
     protected Set<CredibilityObject> getEdgesFromCycle(List<String> cycle) {
-        // the list appears to be reversed
-        final List<String> reversedCycle = cycle.subList(0, cycle.size());
-        Collections.reverse(reversedCycle);
+        // the list of vertices representing the cycle is reversed
+        Collections.reverse(cycle);
 
         final Set<CredibilityObject> edges = new HashSet<>();
-        final Iterator<String> iterator = reversedCycle.iterator();
+        final Iterator<String> iterator = cycle.iterator();
 
         String next = iterator.next();
         String previous;
@@ -326,34 +326,26 @@ public final class CredibilityGraph {
             final CredibilityObject edge = graph.getEdge(previous, next);
 
             if (edge == null) {
-                throw new IllegalArgumentException(String.format("%s is not a cycle", cycle));
+                throw new IllegalArgumentException(
+                        String.format("No edge between %s and %s", previous, next));
             }
-
             edges.add(edge);
         }
 
-        final CredibilityObject cycleEdge = graph.getEdge(next, reversedCycle.get(0));
+        // the final edge must complete the cycle
+        final CredibilityObject cycleEdge = graph.getEdge(next, cycle.get(0));
 
         if (cycleEdge == null) {
             throw new IllegalArgumentException(String.format("%s is not a cycle", cycle));
         }
-
         edges.add(cycleEdge);
 
         return edges;
     }
 
 
-    protected List<Set<CredibilityObject>> findMinimumCycles() {
+    protected List<Set<CredibilityObject>> findCycles() {
         final DirectedSimpleCycles<String, CredibilityObject> algorithm = new HawickJamesSimpleCycles<>(graph);
-
-        final List<Set<CredibilityObject>> minimumCycles = new ArrayList<>();
-
-        for (List<String> cycle : algorithm.findSimpleCycles()) {
-            final Set<CredibilityObject> edges = getEdgesFromCycle(cycle);
-            minimumCycles.add(edges);
-        }
-
-        return minimumCycles;
+        return algorithm.findSimpleCycles().stream().map(this::getEdgesFromCycle).collect(Collectors.toList());
     }
 }

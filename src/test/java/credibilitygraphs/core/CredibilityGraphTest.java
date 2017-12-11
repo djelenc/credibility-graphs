@@ -229,7 +229,7 @@ public class CredibilityGraphTest {
     public void findMinimumCycles() {
         final CredibilityGraph function = new CredibilityGraph("(A, B, X), (B, C, Y), (C, A, Y)");
 
-        final List<Set<CredibilityObject>> cycles = function.findMinimumCycles();
+        final List<Set<CredibilityObject>> cycles = function.findCycles();
 
         assertEquals(1, cycles.size());
         final Set<CredibilityObject> actual = cycles.iterator().next();
@@ -239,22 +239,6 @@ public class CredibilityGraphTest {
                 new CredibilityObject("A", "B", "X"),
                 new CredibilityObject("B", "C", "Y"),
                 new CredibilityObject("C", "A", "Y"));
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    public void cycleFinderAssureMinimal() {
-        final CredibilityGraph function = new CredibilityGraph("(A, B, X), (B, C, Y), (C, A, Y), (B, A, Y)");
-
-        final List<Set<CredibilityObject>> cycles = function.findMinimumCycles();
-
-        assertEquals(1, cycles.size());
-        final Set<CredibilityObject> actual = cycles.iterator().next();
-
-        final Set<CredibilityObject> expected = new HashSet<>();
-        Collections.addAll(expected,
-                new CredibilityObject("A", "B", "X"),
-                new CredibilityObject("B", "A", "Y"));
         assertEquals(expected, actual);
     }
 }
