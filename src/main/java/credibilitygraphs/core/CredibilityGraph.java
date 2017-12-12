@@ -185,12 +185,12 @@ public final class CredibilityGraph {
      * @return
      */
     protected Set<CredibilityObject> getExtremes(Collection<CredibilityObject> allEdges, Extreme type) {
-        return getExtremes(allEdges, type, graph);
+        return getExtremes(allEdges, type, this);
     }
 
     /**
      * Find extremes, defined in type, in a collection of CredibilityObjects,
-     * using graph to measure reliability
+     * using CredibilityGraph to measure reliability
      *
      * @param allEdges
      * @param type
@@ -198,8 +198,8 @@ public final class CredibilityGraph {
      * @return
      */
     protected Set<CredibilityObject> getExtremes(Collection<CredibilityObject> allEdges, Extreme type,
-                                                 Graph<String, CredibilityObject> graph) {
-        final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph);
+                                                 CredibilityGraph graph) {
+        final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph.graph);
         final Set<CredibilityObject> filtered = new HashSet<>(allEdges);
 
         for (CredibilityObject one : allEdges) {
@@ -333,7 +333,7 @@ public final class CredibilityGraph {
 
         // in every cycle, remove the least reliable edge
         findCycles().forEach(cycle -> {
-            final Set<CredibilityObject> leastReliable = getExtremes(cycle.getEdgeList(), Extreme.MIN, old.graph);
+            final Set<CredibilityObject> leastReliable = getExtremes(cycle.getEdgeList(), Extreme.MIN, old);
             graph.removeAllEdges(leastReliable);
         });
     }
