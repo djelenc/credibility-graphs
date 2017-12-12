@@ -2,8 +2,7 @@ package credibilitygraphs.core;
 
 import credibilitygraphs.App;
 import org.jgrapht.GraphPath;
-import org.jgrapht.alg.cycle.DirectedSimpleCycles;
-import org.jgrapht.alg.cycle.HawickJamesSimpleCycles;
+import org.jgrapht.graph.GraphWalk;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -194,52 +193,19 @@ public class CredibilityGraphTest {
     }
 
     @Test
-    public void verticesToEdgesInCycle() {
-        // add cycle (F3, F1, F2)
-        graph.graph.addEdge("F3", "F1", new CredibilityObject("F3", "F1", "F2"));
-
-        final DirectedSimpleCycles<String, CredibilityObject> cycleFinder = new HawickJamesSimpleCycles<>(graph.graph);
-        final List<List<String>> cycles = cycleFinder.findSimpleCycles();
-        cycles.forEach(Collections::reverse);
-        assertEquals(1, cycles.size());
-
-        final List<CredibilityObject> actualEdges = graph.cycleVertices2CycleEdges(cycles.get(0));
-        final List<CredibilityObject> expectedEdges = new ArrayList<>();
-        Collections.addAll(expectedEdges,
-                new CredibilityObject("F1", "F2", "F3"),
-                new CredibilityObject("F2", "F3", "B"),
-                new CredibilityObject("F3", "F1", "F2"));
-        assertEquals(expectedEdges, actualEdges);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void getEdgesNoCycle1() {
-        // no edge F3-F1, thus no cycle
-        final List<String> vertices = Arrays.asList("F1", "F2", "F3");
-        graph.cycleVertices2CycleEdges(vertices);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void getEdgesNoCycle2() {
-        // no edge F1-F3
-        final List<String> vertices = Arrays.asList("F1", "F3");
-        graph.cycleVertices2CycleEdges(vertices);
-    }
-
-    @Test
     public void findMinimumCycles() {
         final CredibilityGraph function = new CredibilityGraph("(A, B, X), (B, C, Y), (C, A, Y)");
 
-        final List<List<CredibilityObject>> cycles = function.findCycles();
+        final List<GraphWalk<String, CredibilityObject>> cycles = function.findCycles();
 
         assertEquals(1, cycles.size());
-        final List<CredibilityObject> actual = cycles.get(0);
+        final List<CredibilityObject> actual = cycles.get(0).getEdgeList();
 
         final List<CredibilityObject> expected = new ArrayList<>();
         Collections.addAll(expected,
+                new CredibilityObject("C", "A", "Y"),
                 new CredibilityObject("A", "B", "X"),
-                new CredibilityObject("B", "C", "Y"),
-                new CredibilityObject("C", "A", "Y"));
+                new CredibilityObject("B", "C", "Y"));
         assertEquals(expected, actual);
     }
 }

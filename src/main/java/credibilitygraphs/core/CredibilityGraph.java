@@ -17,6 +17,7 @@ import org.jgrapht.alg.cycle.DirectedSimpleCycles;
 import org.jgrapht.alg.cycle.HawickJamesSimpleCycles;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.jgrapht.graph.GraphWalk;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.GraphMLExporter;
@@ -332,7 +333,7 @@ public final class CredibilityGraph {
 
         // in every cycle, remove the least reliable edge
         findCycles().forEach(cycle -> {
-            final Set<CredibilityObject> leastReliable = getExtremes(cycle, Extreme.MIN, old.graph);
+            final Set<CredibilityObject> leastReliable = getExtremes(cycle.getEdgeList(), Extreme.MIN, old.graph);
             graph.removeAllEdges(leastReliable);
         });
     }
@@ -356,51 +357,18 @@ public final class CredibilityGraph {
     }
 
     /**
-     * Maps given sequence of vertices that represent a cycle into a
-     * sequence of edges that represent the same cycle
-     *
-     * @param cycle
-     * @return
-     */
-    protected List<CredibilityObject> cycleVertices2CycleEdges(List<String> cycle) {
-        final List<CredibilityObject> edges = new ArrayList<>();
-        final Iterator<String> iterator = cycle.iterator();
-
-        String next = iterator.next();
-        String previous;
-
-        while (iterator.hasNext()) {
-            previous = next;
-            next = iterator.next();
-            final CredibilityObject edge = graph.getEdge(previous, next);
-
-            if (edge == null) {
-                throw new IllegalArgumentException(
-                        String.format("No edge between %s and %s", previous, next));
-            }
-            edges.add(edge);
-        }
-
-        // the final edge must complete the cycle
-        final CredibilityObject cycleEdge = graph.getEdge(next, cycle.get(0));
-
-        if (cycleEdge == null) {
-            throw new IllegalArgumentException(String.format("%s is not a cycle", cycle));
-        }
-        edges.add(cycleEdge);
-
-        return edges;
-    }
-
-    /**
      * Finds all minimal cycles in current knowledge-base
      *
      * @return
      */
-    protected List<List<CredibilityObject>> findCycles() {
+    protected List<GraphWalk<String, CredibilityObject>> findCycles() {
         final DirectedSimpleCycles<String, CredibilityObject> algorithm = new HawickJamesSimpleCycles<>(graph);
-        final List<List<String>> cycles = algorithm.findSimpleCycles();
-        cycles.forEach(Collections::reverse); // cycles are in reverse order
-        return cycles.stream().map(this::cycleVertices2CycleEdges).collect(Collectors.toList());
+        return algorithm.findSimpleCycles().stream()
+                .map(vertices -> {
+                    vertices.add(vertices.get(0)); // connect the cycle
+                    Collections.reverse(vertices); // cycles are found in reverse order
+                    return new GraphWalk<>(graph, vertices, 0);
+                })
+                .collect(Collectors.toList());
     }
 }
