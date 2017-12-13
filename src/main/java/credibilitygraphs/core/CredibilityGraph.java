@@ -361,15 +361,16 @@ public final class CredibilityGraph {
      *
      * @return
      */
-    protected List<GraphWalk<String, CredibilityObject>> findCycles() {
+    protected Set<GraphWalk<String, CredibilityObject>> findCycles() {
         final DirectedSimpleCycles<String, CredibilityObject> algorithm = new HawickJamesSimpleCycles<>(graph);
         return algorithm.findSimpleCycles().stream()
-                .map(vertices -> {
-                    vertices.add(vertices.get(0)); // connect the cycle
-                    Collections.reverse(vertices); // cycles are found in reverse order
-                    return new GraphWalk<>(graph, vertices, 0);
+                .map(vertexes -> {
+                    vertexes.add(vertexes.get(0)); // connect the cycle
+                    Collections.reverse(vertexes); // cycles are found in reverse order
+                    return buildPaths(vertexes);
                 })
-                .collect(Collectors.toList());
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
     }
 
     protected Set<GraphWalk<String, CredibilityObject>> buildPaths(List<String> vertexes) {
@@ -386,8 +387,10 @@ public final class CredibilityGraph {
         final Set<CredibilityObject> edges = graph.getAllEdges(source, target);
 
         for (CredibilityObject edge : edges) {
-            final GraphWalk<String, CredibilityObject> step = new GraphWalk<>(graph, source, target, Collections.singletonList(edge), 0);
-            final Set<GraphWalk<String, CredibilityObject>> nextPaths = buildPaths(vertexes.subList(1, vertexes.size()));
+            final GraphWalk<String, CredibilityObject> step = new GraphWalk<>(
+                    graph, source, target, Collections.singletonList(edge), 0);
+            final Set<GraphWalk<String, CredibilityObject>> nextPaths =
+                    buildPaths(vertexes.subList(1, vertexes.size()));
 
             for (GraphWalk<String, CredibilityObject> path : nextPaths) {
                 final GraphWalk<String, CredibilityObject> full = step.concat(path, e -> 0d);

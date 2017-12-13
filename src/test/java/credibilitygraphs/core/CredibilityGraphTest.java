@@ -195,23 +195,6 @@ public class CredibilityGraphTest {
     }
 
     @Test
-    public void findMinimumCycles() {
-        final CredibilityGraph function = new CredibilityGraph("(A, B, X), (B, C, Y), (C, A, Y)");
-
-        final List<GraphWalk<String, CredibilityObject>> cycles = function.findCycles();
-
-        assertEquals(1, cycles.size());
-        final List<CredibilityObject> actual = cycles.get(0).getEdgeList();
-
-        final List<CredibilityObject> expected = new ArrayList<>();
-        Collections.addAll(expected,
-                new CredibilityObject("C", "A", "Y"),
-                new CredibilityObject("A", "B", "X"),
-                new CredibilityObject("B", "C", "Y"));
-        assertEquals(expected, actual);
-    }
-
-    @Test
     public void buildPathSimple() {
         final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (B, C, Y)");
 
@@ -267,6 +250,24 @@ public class CredibilityGraphTest {
                 .collect(Collectors.toSet());
 
         final Set<GraphWalk<String, CredibilityObject>> actual = new HashSet<>(graph.buildPaths(vertexes));
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void findMinimumCycles() {
+        final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (A, B, Y), (B, C, Z), (C, A, W)");
+
+        final Set<GraphWalk<String, CredibilityObject>> actual = graph.findCycles();
+        assertEquals(2, actual.size());
+
+        final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph.graph);
+
+        final Set<GraphPath<String, CredibilityObject>> expected = finder.getAllPaths(
+                "C", "C", false, graph.graph.vertexSet().size())
+                .stream()
+                .filter(e -> e.getLength() > 0) // drop paths with length 1
+                .collect(Collectors.toSet());
+
         assertEquals(expected, actual);
     }
 }
