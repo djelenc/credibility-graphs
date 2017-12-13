@@ -371,4 +371,30 @@ public final class CredibilityGraph {
                 })
                 .collect(Collectors.toList());
     }
+
+    protected Set<GraphWalk<String, CredibilityObject>> buildPaths(List<String> vertexes) {
+        final String source = vertexes.get(0);
+
+        if (vertexes.size() == 1) {
+            return Collections.singleton(GraphWalk.singletonWalk(graph, source));
+        }
+
+        final Set<GraphWalk<String, CredibilityObject>> allPaths = new HashSet<>();
+
+        final String target = vertexes.get(1);
+
+        final Set<CredibilityObject> edges = graph.getAllEdges(source, target);
+
+        for (CredibilityObject edge : edges) {
+            final GraphWalk<String, CredibilityObject> step = new GraphWalk<>(graph, source, target, Collections.singletonList(edge), 0);
+            final Set<GraphWalk<String, CredibilityObject>> nextPaths = buildPaths(vertexes.subList(1, vertexes.size()));
+
+            for (GraphWalk<String, CredibilityObject> path : nextPaths) {
+                final GraphWalk<String, CredibilityObject> full = step.concat(path, e -> 0d);
+                allPaths.add(full);
+            }
+        }
+
+        return allPaths;
+    }
 }

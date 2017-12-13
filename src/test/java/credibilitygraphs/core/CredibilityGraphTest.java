@@ -2,11 +2,13 @@ package credibilitygraphs.core;
 
 import credibilitygraphs.App;
 import org.jgrapht.GraphPath;
+import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.graph.GraphWalk;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -206,6 +208,65 @@ public class CredibilityGraphTest {
                 new CredibilityObject("C", "A", "Y"),
                 new CredibilityObject("A", "B", "X"),
                 new CredibilityObject("B", "C", "Y"));
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void buildPathSimple() {
+        final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (B, C, Y)");
+
+        final List<String> vertexes = Arrays.asList("A", "B", "C");
+
+        final Set<GraphWalk<String, CredibilityObject>> expected = Collections.singleton(new GraphWalk<>(graph.graph, vertexes, 0));
+        final Set<GraphWalk<String, CredibilityObject>> actual = graph.buildPaths(vertexes);
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void buildPathComplex() {
+        final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (A, B, Y), (B, C, Z), (B, C, X), (B, C, Y)");
+        final List<String> vertexes = Arrays.asList("A", "B", "C");
+
+        final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph.graph);
+
+        final Set<GraphPath<String, CredibilityObject>> expected = new HashSet<>(finder.getAllPaths(
+                "A", "C", false, graph.graph.vertexSet().size()));
+
+        final Set<GraphWalk<String, CredibilityObject>> actual = graph.buildPaths(vertexes);
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void buildPathCycleSimple() {
+        final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (B, A, Y)");
+        final List<String> vertexes = Arrays.asList("A", "B", "A");
+
+        final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph.graph);
+
+        final Set<GraphPath<String, CredibilityObject>> expected = finder.getAllPaths(
+                "A", "A", false, graph.graph.vertexSet().size())
+                .stream()
+                .filter(e -> e.getLength() > 0) // drop paths with length 1
+                .collect(Collectors.toSet());
+
+        final Set<GraphWalk<String, CredibilityObject>> actual = graph.buildPaths(vertexes);
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void buildPathCycleComplex() {
+        final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (A, B, Y), (B, C, X), (B, C, Y), (C, A, Z)");
+        final List<String> vertexes = Arrays.asList("A", "B", "C", "A");
+
+        final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph.graph);
+
+        final Set<GraphPath<String, CredibilityObject>> expected = finder.getAllPaths(
+                "A", "A", false, graph.graph.vertexSet().size())
+                .stream()
+                .filter(e -> e.getLength() > 0) // drop paths with length 1
+                .collect(Collectors.toSet());
+
+        final Set<GraphWalk<String, CredibilityObject>> actual = new HashSet<>(graph.buildPaths(vertexes));
         assertEquals(expected, actual);
     }
 }
