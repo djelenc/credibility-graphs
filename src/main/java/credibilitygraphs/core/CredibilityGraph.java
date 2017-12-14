@@ -25,6 +25,7 @@ import org.jgrapht.io.GraphMLExporter;
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class CredibilityGraph {
 
@@ -373,6 +374,12 @@ public final class CredibilityGraph {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Builds a set of GraphWalks from a list of vertexes representing a cycle
+     *
+     * @param vertexes
+     * @return
+     */
     protected Set<GraphWalk<String, CredibilityObject>> buildPaths(List<String> vertexes) {
         final String source = vertexes.get(0);
 
@@ -399,5 +406,29 @@ public final class CredibilityGraph {
         }
 
         return allPaths;
+    }
+
+    protected Stream<GraphWalk<String, CredibilityObject>> _buildPaths(List<String> vertexes) {
+        final String source = vertexes.get(0);
+
+        if (vertexes.size() == 1) {
+            return Stream.of(GraphWalk.singletonWalk(graph, source));
+        }
+
+        final String target = vertexes.get(1);
+
+        return graph.getAllEdges(source, target).stream().map(edge -> {
+            final GraphWalk<String, CredibilityObject> step =
+                    new GraphWalk<>(graph, source, target, Collections.singletonList(edge), 0);
+
+            final Stream<GraphWalk<String, CredibilityObject>> nextPaths =
+                    _buildPaths(vertexes.subList(1, vertexes.size()));
+
+            return nextPaths.map(path -> {
+                final GraphWalk<String, CredibilityObject> full = step.concat(path, e -> 0d);
+                System.out.printf("Edge(%s), Vertexes(%s) => path: %s%n", edge, vertexes, full);
+                return full;
+            });
+        }).flatMap(e -> e);
     }
 }

@@ -1,14 +1,18 @@
 package credibilitygraphs.core;
 
 import credibilitygraphs.App;
+import guru.nidi.graphviz.engine.Format;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.graph.GraphWalk;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 
@@ -255,10 +259,10 @@ public class CredibilityGraphTest {
 
     @Test
     public void findMinimumCycles() {
-        final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (A, B, Y), (B, C, Z), (C, A, W)");
+        final CredibilityGraph graph = new CredibilityGraph("(A, B, X), (A, B, Y), (B, C, Z), (B, C, W), (C, A, W)");
 
         final Set<GraphWalk<String, CredibilityObject>> actual = graph.findCycles();
-        assertEquals(2, actual.size());
+        assertEquals(4, actual.size());
 
         final AllDirectedPaths<String, CredibilityObject> finder = new AllDirectedPaths<>(graph.graph);
 
@@ -269,5 +273,29 @@ public class CredibilityGraphTest {
                 .collect(Collectors.toSet());
 
         assertEquals(expected, actual);
+    }
+
+    @Ignore
+    @Test
+    public void buildPathSimpleStream() throws IOException {
+        final CredibilityGraph graph = new CredibilityGraph(
+                "(A, B, X), (A, B, Y), (A, B, Z), " +
+                        "(B, C, X), (B, C, Y), (B, C, Z)," +
+                        "(C, D, X)");
+
+        final List<String> vertexes = Arrays.asList("A", "B", "C", "D");
+
+        graph.exportDOT("./func", Format.PNG);
+
+        //final Set<GraphWalk<String, CredibilityObject>> expected = Collections.singleton(new GraphWalk<>(graph.graph, vertexes, 0));
+        final Stream<GraphWalk<String, CredibilityObject>> stream1 = graph._buildPaths(vertexes);
+        final Set<GraphWalk<String, CredibilityObject>> result1 = stream1.limit(1).collect(Collectors.toSet());
+        System.out.println("RESULT " + result1);
+
+        final Stream<GraphWalk<String, CredibilityObject>> stream2 = graph._buildPaths(vertexes);
+        final Set<GraphWalk<String, CredibilityObject>> result2 = stream2.collect(Collectors.toSet());
+        System.out.println("RESULT " + result2);
+        //assertEquals(expected, actual);
+        System.out.println(result2.size());
     }
 }
