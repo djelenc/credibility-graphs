@@ -16,39 +16,59 @@ public final class App {
 
     public static void basic() throws IOException {
         final CredibilityGraph graph = new CredibilityGraph(EXAMPLE2);
-        graph.exportDOT("./fig-1", Format.PNG);
+        graph.exportDOT("./fig-1", Format.PNG, true);
 
         graph.expansion("C", "F1", "B");
-        graph.exportDOT("./fig-2-expansion", Format.PNG);
+        graph.exportDOT("./fig-2-expansion", Format.PNG, true);
 
         graph.contraction("C", "F1");
-        graph.exportDOT("./fig-3-contraction", Format.PNG);
+        graph.exportDOT("./fig-3-contraction", Format.PNG, true);
 
         graph.nonPrioritizedRevision("A4", "A1", "B");
-        graph.exportDOT("./fig-4-npr-revision", Format.PNG);
+        graph.exportDOT("./fig-4-npr-revision", Format.PNG, true);
 
         graph.prioritizedRevision("A4", "A1", "B");
-        graph.exportDOT("./fig-5-pr-revision", Format.PNG);
+        graph.exportDOT("./fig-5-pr-revision", Format.PNG, true);
 
         final CredibilityGraph graph2 = new CredibilityGraph(EXAMPLE13);
-        graph2.exportDOT("./fig-6", Format.PNG);
+        graph2.exportDOT("./fig-6", Format.PNG, true);
         graph2.exportGraphML("./fig-6");
 
         graph2.nonPrioritizedRevision("L", "H", "G");
-        graph2.exportDOT("./fig-7-npr-revision", Format.PNG);
+        graph2.exportDOT("./fig-7-npr-revision", Format.PNG, true);
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main1(String[] args) throws IOException {
         // basic();
         final CredibilityGraph graph = new CredibilityGraph(
                 "(A, E, B), (D, B, A), (C, A, D), (B, A, E)");
-        graph.exportDOT("./g1", Format.PNG);
+        graph.exportDOT("./g1", Format.PNG, true);
 
         final CredibilityGraph newGraph = new CredibilityGraph(
                 "(A, C, E), (C, D, B)");
-        newGraph.exportDOT("./g2", Format.PNG);
+        newGraph.exportDOT("./g2", Format.PNG, true);
 
         graph.merge(newGraph);
-        graph.exportDOT("./merged", Format.PNG);
+        graph.exportDOT("./merged", Format.PNG, true);
+    }
+
+    public static void main(String[] args) throws IOException {
+        // experiences();
+        opinions();
+    }
+
+    private static void opinions() throws IOException {
+        final CredibilityGraph graph = new CredibilityGraph(
+                "(E, A, op), (A, C, op), (B, C, op), (E, B, op)");
+        graph.graph.addVertex("F");
+        graph.graph.addVertex("G");
+        graph.graph.addVertex("H");
+        graph.exportDOT("./ops", Format.SVG, false);
+    }
+
+    private static void experiences() throws IOException {
+        final CredibilityGraph graph = new CredibilityGraph(
+                "(A, E, exp), (D, B, exp), (C, A, exp), (B, A, exp)");
+        graph.exportDOT("./exp", Format.SVG, false);
     }
 }

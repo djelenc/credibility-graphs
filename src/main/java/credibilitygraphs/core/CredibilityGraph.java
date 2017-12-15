@@ -33,7 +33,7 @@ public final class CredibilityGraph {
         MIN, MAX
     }
 
-    protected final Graph<String, CredibilityObject> graph;
+    public final Graph<String, CredibilityObject> graph;
 
     private CredibilityGraph(Graph<String, CredibilityObject> graph) {
         this.graph = graph;
@@ -65,15 +65,16 @@ public final class CredibilityGraph {
      *
      * @param fileName
      * @param format
+     * @param edgeLabels include label in edges
      * @throws ExportException
      * @throws IOException
      */
-    public void exportDOT(String fileName, Format format)
+    public void exportDOT(String fileName, Format format, boolean edgeLabels)
             throws IOException {
         final DOTExporter<String, CredibilityObject> exporter = new DOTExporter<>(
                 Object::toString,
                 null,
-                CredibilityObject::getReporter);
+                edgeLabels ? CredibilityObject::getReporter : null);
 
         final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try {

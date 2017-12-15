@@ -285,7 +285,7 @@ public class CredibilityGraphTest {
 
         final List<String> vertexes = Arrays.asList("A", "B", "C", "D");
 
-        graph.exportDOT("./func", Format.PNG);
+        graph.exportDOT("./func", Format.PNG, true);
 
         //final Set<GraphWalk<String, CredibilityObject>> expected = Collections.singleton(new GraphWalk<>(graph.graph, vertexes, 0));
         final Stream<GraphWalk<String, CredibilityObject>> stream1 = graph._buildPaths(vertexes);
