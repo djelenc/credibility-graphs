@@ -54,21 +54,33 @@ public final class App {
 
     public static void main(String[] args) throws IOException {
         // experiences();
-        opinions();
+        // opinions();
+        informants();
+    }
+
+    private static void informants() throws IOException {
+        final CredibilityGraph inf = new CredibilityGraph(
+                "(B, D, inf), (A, D, inf)");
+        inf.graph.addVertex("C");
+        inf.graph.addVertex("E");
+        inf.graph.addVertex("F");
+        inf.graph.addVertex("G");
+        inf.exportDOT("./inf", Format.SVG, true);
     }
 
     private static void opinions() throws IOException {
-        final CredibilityGraph graph = new CredibilityGraph(
-                "(E, A, op), (A, C, op), (B, C, op), (E, B, op)");
-        graph.graph.addVertex("F");
-        graph.graph.addVertex("G");
-        graph.graph.addVertex("H");
-        graph.exportDOT("./ops", Format.SVG, false);
+        final CredibilityGraph op1 = new CredibilityGraph(
+                "(A, C, D), (C, B, D)");
+        op1.exportDOT("./ops1", Format.SVG, true);
+
+        final CredibilityGraph op2 = new CredibilityGraph(
+                "(E, F, B), (F, G, B), (A, F, B)");
+        op2.exportDOT("./ops2", Format.SVG, true);
     }
 
     private static void experiences() throws IOException {
         final CredibilityGraph graph = new CredibilityGraph(
-                "(A, E, exp), (D, B, exp), (C, A, exp), (B, A, exp)");
-        graph.exportDOT("./exp", Format.SVG, false);
+                "(A, B, exp), (B, C, exp)");
+        graph.exportDOT("./exp", Format.SVG, true);
     }
 }
