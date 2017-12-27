@@ -38,8 +38,11 @@ public final class App {
         graph2.exportDOT("./fig-7-npr-revision", Format.PNG, true);
     }
 
-    public static void main1(String[] args) throws IOException {
-        // basic();
+    public static void main(String[] args) throws IOException {
+        // experiences();
+        // opinions();
+        // informants();
+
         final CredibilityGraph graph = new CredibilityGraph(
                 "(A, E, B), (D, B, A), (C, A, D), (B, A, E)");
         graph.exportDOT("./g1", Format.PNG, true);
@@ -50,12 +53,6 @@ public final class App {
 
         graph.merge(newGraph);
         graph.exportDOT("./merged", Format.PNG, true);
-    }
-
-    public static void main(String[] args) throws IOException {
-        // experiences();
-        // opinions();
-        informants();
     }
 
     private static void informants() throws IOException {
