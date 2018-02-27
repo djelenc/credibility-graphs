@@ -66,12 +66,10 @@ fun main(args: Array<String>) {
     // App.opinions();
     // App.informants();
 
-    val graph = CredibilityGraph(
-            "(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
+    val graph = CredibilityGraph("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
     graph.exportDOT("./g1", Format.PNG, true)
 
-    val newGraph = CredibilityGraph(
-            "(A, C, E), (C, D, B)")
+    val newGraph = CredibilityGraph("(A, C, E), (C, D, B)")
     newGraph.exportDOT("./g2", Format.PNG, true)
 
     graph.merge(newGraph)
