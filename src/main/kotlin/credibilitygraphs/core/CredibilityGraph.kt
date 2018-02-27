@@ -120,11 +120,8 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param targetVertex
      * @return
      */
-    protected fun findPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> {
-        val pathFinder = AllDirectedPaths(graph)
-        return pathFinder.getAllPaths(sourceVertex, targetVertex,
-                false, graph.edgeSet().size)
-    }
+    protected fun findPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> =
+            AllDirectedPaths(graph).getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
 
     /**
      * Expands the graph by adding a new edge from source to target that is provided by the reporter.
@@ -137,11 +134,12 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      */
     fun expansion(source: String, target: String, reporter: String): Boolean {
         if (graph.containsVertex(source) && graph.containsVertex(target)) {
-            val pathFinder = AllDirectedPaths(graph)
-            val fromTarget2Source = pathFinder.getAllPaths(
-                    target, source, true, null)
+            val reversePathExists = AllDirectedPaths(graph)
+                    .getAllPaths(target, source, true, null)
+                    .isEmpty()
+                    .not()
 
-            if (fromTarget2Source.size != 0) {
+            if (reversePathExists) {
                 return false
             }
         }
@@ -175,15 +173,14 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
 
 
     /**
-     * Find extremes, defined in type, in a collection of CredibilityObjects
+     * Find extremes, defined in extreme, in a collection of CredibilityObjects
      *
      * @param allEdges
-     * @param type
+     * @param extreme
      * @return
      */
-    protected fun getExtremes(allEdges: Collection<CredibilityObject>, type: Extreme): Set<CredibilityObject> {
-        return getExtremes(allEdges, type, this)
-    }
+    protected fun getExtremes(allEdges: Collection<CredibilityObject>, extreme: Extreme) =
+            getExtremes(allEdges, extreme, this)
 
     /**
      * Find extremes, defined in type, in a collection of CredibilityObjects,
