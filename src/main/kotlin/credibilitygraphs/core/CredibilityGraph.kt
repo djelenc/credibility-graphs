@@ -42,7 +42,7 @@ data class CredibilityObject(val source: String, val target: String, val reporte
  */
 class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     // allows finding paths between graph nodes
-    private val mPathFinder = AllDirectedPaths(graph)
+    private val finder = AllDirectedPaths(graph)
 
     enum class Extreme {
         MIN, MAX
@@ -132,7 +132,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @return
      */
     protected fun getAllPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> =
-            mPathFinder.getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
+            finder.getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
 
     /**
      * Expands the graph by adding a new edge from source to target that is provided by the reporter.
@@ -142,7 +142,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      */
     fun expansion(obj: CredibilityObject): Boolean {
         if (graph.containsVertex(obj.source) && graph.containsVertex(obj.target)) {
-            val reversePathExists = mPathFinder
+            val reversePathExists = finder
                     .getAllPaths(obj.target, obj.source, true, null)
                     .isEmpty()
                     .not()
@@ -158,7 +158,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Find extremes [w.r.t the credibility of reporters] on all paths between source and target.
+     * Find extremes (w.r.t the credibility of reporters) on all paths between source and target.
      *
      * @param source node
      * @param target node
@@ -188,7 +188,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
 
         TODO()*/
 
-        val finder = if (graph == this) mPathFinder else AllDirectedPaths(graph.graph)
+        val finder = if (graph == this) finder else AllDirectedPaths(graph.graph)
         val filtered = HashSet(objects)
 
         for (one in objects) {
@@ -228,8 +228,8 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     fun min(current: Set<CredibilityObject>, co: CredibilityObject): Set<CredibilityObject> {
         val allPaths = current.map {
             it to Pair(
-                    mPathFinder.getAllPaths(it.reporter, co.reporter, true, null).isNotEmpty(),
-                    mPathFinder.getAllPaths(co.reporter, it.reporter, true, null).isNotEmpty()
+                    finder.getAllPaths(it.reporter, co.reporter, true, null).isNotEmpty(),
+                    finder.getAllPaths(co.reporter, it.reporter, true, null).isNotEmpty()
             )
         }
 
@@ -269,7 +269,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
 
     /**
      * Estimates the reliability of source being less credible than the target.
-     * The reliability is denoted with the set of least reliable reporters
+     * The reliability is denoted with the set of least credible reporters
      * that claim the source is less credible than the target.
      *
      * @param source
@@ -296,10 +296,9 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      */
     fun nonPrioritizedRevision(obj: CredibilityObject): Boolean {
         val reliabilityOfOpposite = reliability(obj.target, obj.source)
-        val objIsMoreReliable = reliabilityOfOpposite.all { currentReporter ->
-            mPathFinder.getAllPaths(currentReporter, obj.reporter, true, null)
-                    .isEmpty()
-                    .not()
+        val objIsMoreReliable = reliabilityOfOpposite.all {
+            finder.getAllPaths(obj.reporter, it,true, null).isEmpty()
+            // TODO: what if the reporter and it are incomparable?
         }
 
         return if (objIsMoreReliable) {
@@ -357,14 +356,14 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      */
     protected fun findCycles(): Set<GraphWalk<String, CredibilityObject>> {
         val algorithm = HawickJamesSimpleCycles(graph)
-        return algorithm.findSimpleCycles().stream()
+        return algorithm.findSimpleCycles()
                 .map { vertexes ->
                     vertexes.add(vertexes[0]) // connect the cycle
                     vertexes.reverse() // cycles are found in reverse order
                     buildPaths(vertexes)
                 }
-                .flatMap { it.stream() }
-                .collect(Collectors.toSet())
+                .flatMap { it }
+                .toSet()
     }
 
     /**
