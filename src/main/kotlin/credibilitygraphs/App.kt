@@ -1,6 +1,7 @@
 package credibilitygraphs
 
 import credibilitygraphs.core.CredibilityGraph
+import credibilitygraphs.core.CredibilityObject
 import guru.nidi.graphviz.engine.Format
 
 object App {
@@ -12,26 +13,26 @@ object App {
 
     fun basic() {
         val graph = CredibilityGraph(EXAMPLE2)
-        graph.exportDOT("./fig-1", Format.PNG, true)
+        graph.exportDOT("./fig-1", Format.PNG)
 
-        graph.expansion("C", "F1", "B")
-        graph.exportDOT("./fig-2-expansion", Format.PNG, true)
+        graph.expansion(CredibilityObject("C", "F1", "B"))
+        graph.exportDOT("./fig-2-expansion", Format.PNG)
 
         graph.contraction("C", "F1")
-        graph.exportDOT("./fig-3-contraction", Format.PNG, true)
+        graph.exportDOT("./fig-3-contraction", Format.PNG)
 
-        graph.nonPrioritizedRevision("A4", "A1", "B")
-        graph.exportDOT("./fig-4-npr-revision", Format.PNG, true)
+        graph.nonPrioritizedRevision(CredibilityObject("A4", "A1", "B"))
+        graph.exportDOT("./fig-4-npr-revision", Format.PNG)
 
-        graph.prioritizedRevision("A4", "A1", "B")
-        graph.exportDOT("./fig-5-pr-revision", Format.PNG, true)
+        graph.prioritizedRevision(CredibilityObject("A4", "A1", "B"))
+        graph.exportDOT("./fig-5-pr-revision", Format.PNG)
 
         val graph2 = CredibilityGraph(EXAMPLE13)
-        graph2.exportDOT("./fig-6", Format.PNG, true)
+        graph2.exportDOT("./fig-6", Format.PNG)
         graph2.exportGraphML("./fig-6")
 
-        graph2.nonPrioritizedRevision("L", "H", "G")
-        graph2.exportDOT("./fig-7-npr-revision", Format.PNG, true)
+        graph2.nonPrioritizedRevision(CredibilityObject("L", "H", "G"))
+        graph2.exportDOT("./fig-7-npr-revision", Format.PNG)
     }
 
     fun informants() {
@@ -41,23 +42,23 @@ object App {
         inf.graph.addVertex("E")
         inf.graph.addVertex("F")
         inf.graph.addVertex("G")
-        inf.exportDOT("./inf", Format.SVG, true)
+        inf.exportDOT("./inf", Format.SVG)
     }
 
     fun opinions() {
         val op1 = CredibilityGraph(
                 "(A, C, D), (C, B, D)")
-        op1.exportDOT("./ops1", Format.SVG, true)
+        op1.exportDOT("./ops1", Format.SVG)
 
         val op2 = CredibilityGraph(
                 "(E, F, B), (F, G, B), (A, F, B)")
-        op2.exportDOT("./ops2", Format.SVG, true)
+        op2.exportDOT("./ops2", Format.SVG)
     }
 
     fun experiences() {
         val graph = CredibilityGraph(
                 "(A, B, exp), (B, C, exp)")
-        graph.exportDOT("./exp", Format.SVG, true)
+        graph.exportDOT("./exp", Format.SVG)
     }
 }
 
@@ -67,12 +68,12 @@ fun main(args: Array<String>) {
     // App.informants();
 
     val graph = CredibilityGraph("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
-    graph.exportDOT("./g1", Format.PNG, true)
+    graph.exportDOT("./g1", Format.PNG)
 
     val newGraph = CredibilityGraph("(A, C, E), (C, D, B)")
-    newGraph.exportDOT("./g2", Format.PNG, true)
+    newGraph.exportDOT("./g2", Format.PNG)
 
     graph.merge(newGraph)
-    graph.exportDOT("./merged", Format.PNG, true)
+    graph.exportDOT("./merged", Format.PNG)
 }
 

@@ -13,6 +13,7 @@ import org.jgrapht.Graph
 import org.jgrapht.GraphPath
 import org.jgrapht.alg.cycle.HawickJamesSimpleCycles
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
+import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.graph.DirectedMultigraph
 import org.jgrapht.graph.GraphWalk
 import org.jgrapht.io.ComponentNameProvider
@@ -26,14 +27,28 @@ import java.io.IOException
 import java.util.*
 import java.util.stream.Collectors
 
+/**
+ * Represents a credibility object with source, target and a reporter.
+ *
+ * In a credibility graph, the credibility object is effectively an edge between
+ * source and target with the reporter being its label.
+ */
+data class CredibilityObject(val source: String, val target: String, val reporter: String) : DefaultEdge() {
+    override fun toString() = "$reporter ($source-$target)"
+}
 
+/**
+ * Represents a knowledge-base of credibility objects
+ */
 class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
-
-    constructor(credibilityObjects: String) : this(parseObjects(credibilityObjects))
+    // allows finding paths between graph nodes
+    private val mPathFinder = AllDirectedPaths(graph)
 
     enum class Extreme {
         MIN, MAX
     }
+
+    constructor(credibilityObjects: String) : this(parseObjects(credibilityObjects))
 
     companion object {
         /**
@@ -53,7 +68,6 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
         }
     }
 
-
     /**
      * Exports given graph into DOT format and saves it into file using given format.
      * The DOT exporter requires the graphviz be installed.
@@ -65,7 +79,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @throws IOException
      */
     @Throws(IOException::class)
-    fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean) {
+    fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean = true) {
         val exporter = DOTExporter<String, CredibilityObject>(
                 ComponentNameProvider<String> { it.toString() }, null,
                 if (edgeLabels) ComponentNameProvider<CredibilityObject> { it.reporter } else null)
@@ -77,8 +91,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
             throw IOException(e)
         }
 
-        val `is` = ByteArrayInputStream(stream.toByteArray())
-        val mutableGraph = Parser.read(`is`)
+        val mutableGraph = Parser.read(ByteArrayInputStream(stream.toByteArray()))
         mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP)
         Graphviz.fromGraph(mutableGraph)
                 .render(format)
@@ -94,16 +107,14 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      */
     @Throws(IOException::class)
     fun exportGraphML(fileName: String) {
-        val exporter = GraphMLExporter<String, CredibilityObject>()
-
-        exporter.setVertexIDProvider(ComponentNameProvider<String> { it.toString() })
-        exporter.setVertexLabelProvider(ComponentNameProvider<String> { it.toString() })
-
-        exporter.setEdgeLabelProvider(ComponentNameProvider<CredibilityObject> { it.reporter })
-        exporter.setEdgeIDProvider { e -> e.hashCode().toString() }
-
-        exporter.vertexLabelAttributeName = "Text"
-        exporter.edgeLabelAttributeName = "Text"
+        val exporter = GraphMLExporter<String, CredibilityObject>().apply {
+            setVertexIDProvider({ it.toString() })
+            setVertexLabelProvider({ it.toString() })
+            setEdgeLabelProvider({ it.reporter })
+            setEdgeIDProvider { it.hashCode().toString() }
+            vertexLabelAttributeName = "Text"
+            edgeLabelAttributeName = "Text"
+        }
 
         try {
             exporter.exportGraph(graph, File(fileName + ".graphml"))
@@ -120,22 +131,19 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param targetVertex
      * @return
      */
-    protected fun findPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> =
-            AllDirectedPaths(graph).getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
+    protected fun getAllPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> =
+            mPathFinder.getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
 
     /**
      * Expands the graph by adding a new edge from source to target that is provided by the reporter.
-     * Returns true on success, false otherwise.
      *
-     * @param source
-     * @param target
-     * @param reporter
-     * @return
+     * @param obj credibility object to be added
+     * @return true on success, false otherwise
      */
-    fun expansion(source: String, target: String, reporter: String): Boolean {
-        if (graph.containsVertex(source) && graph.containsVertex(target)) {
-            val reversePathExists = AllDirectedPaths(graph)
-                    .getAllPaths(target, source, true, null)
+    fun expansion(obj: CredibilityObject): Boolean {
+        if (graph.containsVertex(obj.source) && graph.containsVertex(obj.target)) {
+            val reversePathExists = mPathFinder
+                    .getAllPaths(obj.target, obj.source, true, null)
                     .isEmpty()
                     .not()
 
@@ -144,56 +152,37 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
             }
         }
 
-        graph.addVertex(source)
-        graph.addVertex(target)
-        return graph.addEdge(source, target, CredibilityObject(source, target, reporter))
+        graph.addVertex(obj.source)
+        graph.addVertex(obj.target)
+        return graph.addEdge(obj.source, obj.target, obj)
     }
 
     /**
-     * Find extreme objects [regarding the credibility of reporters] on all
-     * paths between source and target.
+     * Find extremes [w.r.t the credibility of reporters] on all paths between source and target.
      *
-     * @param source
-     * @param target
-     * @param type
-     * @return
+     * @param source node
+     * @param target node
+     * @param type of extreme
+     * @return set extremes
      */
-    protected fun getExtremesFromAllPaths(source: String, target: String, type: Extreme): Set<CredibilityObject> {
-        val paths = findPaths(source, target)
-        val sources = HashSet<CredibilityObject>()
-
-        for (path in paths) {
-            val edges = path.edgeList
-            val candidates = getExtremes(edges, type)
-            sources.addAll(candidates)
-        }
-
-        return sources
-    }
+    protected fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
+            getAllPaths(source, target) // get all paths
+                    .flatMap { getExtremes(it.edgeList, type) } // get extreme(s) of each path
+                    .toSet() // convert to set
 
 
     /**
-     * Find extremes, defined in extreme, in a collection of CredibilityObjects
+     * Find extremes in a collection of CredibilityObjects. Use CredibilityGraph to measure
+     * reliability of credibility objects.
      *
-     * @param allEdges
-     * @param extreme
-     * @return
+     * @param allEdges collection of credibility objects
+     * @param extreme the type of extreme
+     * @param graph to measure reliability of credibility objects
+     * @return set of credibility objects that have extreme reliability
      */
-    protected fun getExtremes(allEdges: Collection<CredibilityObject>, extreme: Extreme) =
-            getExtremes(allEdges, extreme, this)
-
-    /**
-     * Find extremes, defined in type, in a collection of CredibilityObjects,
-     * using CredibilityGraph to measure reliability
-     *
-     * @param allEdges
-     * @param type
-     * @param graph
-     * @return
-     */
-    protected fun getExtremes(allEdges: Collection<CredibilityObject>, type: Extreme,
-                              graph: CredibilityGraph): Set<CredibilityObject> {
-        val finder = AllDirectedPaths(graph.graph)
+    protected fun getExtremes(allEdges: Collection<CredibilityObject>, extreme: Extreme,
+                              graph: CredibilityGraph = this): Set<CredibilityObject> {
+        val finder = if (graph == this) mPathFinder else AllDirectedPaths(graph.graph)
         val filtered = HashSet(allEdges)
 
         for (one in allEdges) {
@@ -211,7 +200,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
                     continue
                 }
 
-                if (type == Extreme.MAX) {
+                if (extreme == Extreme.MAX) {
                     if (!one2two.isEmpty()) {
                         filtered.remove(one)
                     } else {
@@ -237,26 +226,24 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param target
      */
     fun contraction(source: String, target: String) {
-        val toRemove = getExtremesFromAllPaths(source, target, Extreme.MIN)
+        val toRemove = getExtremes(source, target, Extreme.MIN)
         graph.removeAllEdges(toRemove)
     }
 
     /**
-     * Add the provided credibility tuple to the knowledge-base, and assure the latter
+     * Adds the provided credibility object to the knowledge-base, and assures the latter
      * is consistent
      *
-     * @param source
-     * @param target
-     * @param reporter
-     * @return
+     * @param obj credibility object to be added
+     * @return true on success, false otherwise
      */
-    fun prioritizedRevision(source: String, target: String, reporter: String): Boolean {
-        contraction(target, source)
-        return expansion(source, target, reporter)
+    fun prioritizedRevision(obj: CredibilityObject): Boolean {
+        contraction(obj.target, obj.source)
+        return expansion(obj)
     }
 
     /**
-     * Estimate th reliability of source being less credible than the target.
+     * Estimates the reliability of source being less credible than the target.
      * The reliability is denoted with the set of least reliable reporters
      * that claim the source is less credible than the target.
      *
@@ -265,49 +252,35 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @return
      */
     protected fun reliability(source: String, target: String): Set<String> {
-        val minimalSources = getExtremesFromAllPaths(source, target, Extreme.MIN)
+        val minimalSources = getExtremes(source, target, Extreme.MIN)
         val maximalSources = getExtremes(minimalSources, Extreme.MAX)
 
         return maximalSources.map { it.reporter }.toSet()
-        // return maximalSources.stream().map<String>(Function<CredibilityObject, String> { it.getReporter() }).collect<Set<String>, Any>(Collectors.toSet())
     }
 
     /**
-     * Revise the knowledge-base by trying to add given credibility object.
-     *
+     * Revises the knowledge-base by trying to add given credibility object.
      *
      * The revision succeeds iff:
      *  * it does not contradict current knowledge-base, or
      *  * it contradicts the current knowledge-base but the reliability of the
-     * new information is higher than the one in the knowledge-base.
+     * new information is higher.
      *
-     *
-     * @param source
-     * @param target
-     * @param reporter
-     * @return
+     * @param obj credibility object to be added
+     * @return true on success, false otherwise
      */
-    fun nonPrioritizedRevision(source: String, target: String, reporter: String): Boolean {
-        val paths = findPaths(target, source)
+    fun nonPrioritizedRevision(obj: CredibilityObject): Boolean {
+        val reliabilityOfOpposite = reliability(obj.target, obj.source)
+        val objIsMoreReliable = reliabilityOfOpposite.all { currentReporter ->
+            mPathFinder.getAllPaths(currentReporter, obj.reporter, true, null)
+                    .isEmpty()
+                    .not()
+        }
 
-        if (paths.isEmpty()) {
-            return expansion(source, target, reporter)
+        return if (objIsMoreReliable) {
+            prioritizedRevision(obj)
         } else {
-            val reliabilities = reliability(target, source)
-            val finder = AllDirectedPaths(graph)
-
-            for (existingReporter in reliabilities) {
-                val existing2reporter = finder.getAllPaths(
-                        existingReporter, reporter, true, null)
-
-                if (existing2reporter.isEmpty()) {
-                    // an existing reporter is either more credible than or incomparable to reporter
-                    return false
-                }
-            }
-
-            // all existing reporters are less credible than the new one
-            return prioritizedRevision(source, target, reporter)
+            false
         }
     }
 
@@ -322,9 +295,9 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
 
         // copy all vertices and edges from input into this graph
         input.graph.edgeSet().forEach { edge ->
-            this.graph.addVertex(edge.src)
-            this.graph.addVertex(edge.tgt)
-            this.graph.addEdge(edge.src, edge.tgt, edge)
+            this.graph.addVertex(edge.source)
+            this.graph.addVertex(edge.target)
+            this.graph.addEdge(edge.source, edge.target, edge)
         }
 
         // in every cycle, remove the least reliable edge
@@ -343,10 +316,10 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
         val newGraph = DirectedMultigraph<String, CredibilityObject>(CredibilityObject::class.java)
 
         graph.edgeSet().forEach { edge ->
-            newGraph.addVertex(edge.src)
-            newGraph.addVertex(edge.tgt)
-            newGraph.addEdge(edge.src, edge.tgt,
-                    CredibilityObject(edge.src, edge.tgt, edge.reporter))
+            newGraph.addVertex(edge.source)
+            newGraph.addVertex(edge.target)
+            newGraph.addEdge(edge.source, edge.target,
+                    CredibilityObject(edge.source, edge.target, edge.reporter))
         }
 
         return CredibilityGraph(newGraph)
