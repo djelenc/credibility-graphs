@@ -172,21 +172,27 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
 
 
     /**
-     * Find extremes in a collection of CredibilityObjects. Use CredibilityGraph to measure
+     * Find extremes in a collection of CredibilityObjects. Use given graph to determine the
      * reliability of credibility objects.
      *
-     * @param allEdges collection of credibility objects
+     * @param objects collection of credibility objects
      * @param extreme the type of extreme
      * @param graph to measure reliability of credibility objects
      * @return set of credibility objects that have extreme reliability
      */
-    protected fun getExtremes(allEdges: Collection<CredibilityObject>, extreme: Extreme,
+    protected fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
                               graph: CredibilityGraph = this): Set<CredibilityObject> {
-        val finder = if (graph == this) mPathFinder else AllDirectedPaths(graph.graph)
-        val filtered = HashSet(allEdges)
+        /*objects.fold(Collections.EMPTY_SET) { acc, e ->
+            TODO()
+        }
 
-        for (one in allEdges) {
-            for (two in allEdges) {
+        TODO()*/
+
+        val finder = if (graph == this) mPathFinder else AllDirectedPaths(graph.graph)
+        val filtered = HashSet(objects)
+
+        for (one in objects) {
+            for (two in objects) {
                 if (one.reporter == two.reporter) {
                     continue
                 }
@@ -217,6 +223,25 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
         }
 
         return filtered
+    }
+
+    fun min(current: Set<CredibilityObject>, co: CredibilityObject): Set<CredibilityObject> {
+        val allPaths = current.map {
+            it to Pair(
+                    mPathFinder.getAllPaths(it.reporter, co.reporter, true, null).isNotEmpty(),
+                    mPathFinder.getAllPaths(co.reporter, it.reporter, true, null).isNotEmpty()
+            )
+        }
+
+        val incomparableToAll = allPaths.all { !it.second.first && !it.second.second }
+        if (incomparableToAll) return current + co
+
+        val greaterThanAll = allPaths.all { it.second.first && !it.second.second }
+        if (greaterThanAll) return current
+
+        // current.filter {  }
+
+        TODO("Have to implement min")
     }
 
     /**
