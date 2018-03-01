@@ -25,7 +25,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.util.*
-import java.util.stream.Collectors
 
 /**
  * Represents a credibility object with source, target and a reporter.
@@ -297,8 +296,9 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     fun nonPrioritizedRevision(obj: CredibilityObject): Boolean {
         val reliabilityOfOpposite = reliability(obj.target, obj.source)
         val objIsMoreReliable = reliabilityOfOpposite.all {
-            finder.getAllPaths(obj.reporter, it,true, null).isEmpty()
-            // TODO: what if the reporter and it are incomparable?
+            finder.getAllPaths(it, obj.reporter, true, null).isNotEmpty()
+            // Q: what if the reporter and it are incomparable?
+            // A: objects from incomparable reporters are not added
         }
 
         return if (objIsMoreReliable) {
