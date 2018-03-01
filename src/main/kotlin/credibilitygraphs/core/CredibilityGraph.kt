@@ -36,16 +36,21 @@ data class CredibilityObject(val source: String, val target: String, val reporte
     override fun toString() = "$reporter ($source-$target)"
 }
 
+enum class Extreme {
+    MIN, MAX
+}
+
+enum class Comparison {
+    LESS, MORE, INCOMPARABLE
+}
+
+
 /**
  * Represents a knowledge-base of credibility objects
  */
 class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     // allows finding paths between graph nodes
     private val finder = AllDirectedPaths(graph)
-
-    enum class Extreme {
-        MIN, MAX
-    }
 
     constructor(credibilityObjects: String) : this(parseObjects(credibilityObjects))
 
@@ -124,13 +129,32 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
+     * Compares [source] to [target] and returns a Comparison
+     *
+     * @param source node
+     * @param target node
+     * @return [Comparison.INCOMPARABLE], [Comparison.MORE], or [Comparison.INCOMPARABLE]
+     */
+    internal fun compare(source: String, target: String): Comparison {
+        val source2target = finder.getAllPaths(source, target, true, null)
+        val target2source = finder.getAllPaths(target, source, true, null)
+
+        return when {
+            source2target.isEmpty() && target2source.isEmpty() -> Comparison.INCOMPARABLE
+            source2target.isNotEmpty() && target2source.isEmpty() -> Comparison.LESS
+            source2target.isEmpty() && target2source.isNotEmpty() -> Comparison.MORE
+            else -> throw IllegalStateException("Cycle: $source-$target-$source")
+        }
+    }
+
+    /**
      * Finds all paths between given source and target vertex
      *
      * @param sourceVertex
      * @param targetVertex
      * @return
      */
-    protected fun getAllPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> =
+    internal fun getAllPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> =
             finder.getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
 
     /**
@@ -164,7 +188,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param type of extreme
      * @return set extremes
      */
-    protected fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
+    internal fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
             getAllPaths(source, target) // get all paths
                     .flatMap { getExtremes(it.edgeList, type) } // get extreme(s) of each path
                     .toSet() // convert to set
@@ -179,8 +203,8 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param graph to measure reliability of credibility objects
      * @return set of credibility objects that have extreme reliability
      */
-    protected fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
-                              graph: CredibilityGraph = this): Set<CredibilityObject> {
+    internal fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
+                             graph: CredibilityGraph = this): Set<CredibilityObject> {
         /*objects.fold(Collections.EMPTY_SET) { acc, e ->
             TODO()
         }
@@ -275,7 +299,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param target
      * @return
      */
-    protected fun reliability(source: String, target: String): Set<String> {
+    internal fun reliability(source: String, target: String): Set<String> {
         val minimalSources = getExtremes(source, target, Extreme.MIN)
         val maximalSources = getExtremes(minimalSources, Extreme.MAX)
 
@@ -354,7 +378,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      *
      * @return
      */
-    protected fun findCycles(): Set<GraphWalk<String, CredibilityObject>> {
+    internal fun findCycles(): Set<GraphWalk<String, CredibilityObject>> {
         val algorithm = HawickJamesSimpleCycles(graph)
         return algorithm.findSimpleCycles()
                 .map { vertexes ->
@@ -372,7 +396,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param vertexes
      * @return
      */
-    protected fun buildPaths(vertexes: List<String>): Set<GraphWalk<String, CredibilityObject>> {
+    internal fun buildPaths(vertexes: List<String>): Set<GraphWalk<String, CredibilityObject>> {
         val source = vertexes[0]
 
         if (vertexes.size == 1) {
