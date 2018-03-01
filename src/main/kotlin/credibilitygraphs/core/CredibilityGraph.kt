@@ -49,7 +49,7 @@ enum class Comparison {
  * Represents a knowledge-base of credibility objects
  */
 class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
-    // allows finding paths between graph nodes
+    // finder finds paths between graph nodes
     private val finder = AllDirectedPaths(graph)
 
     constructor(credibilityObjects: String) : this(parseObjects(credibilityObjects))
@@ -80,9 +80,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @param format
      * @param edgeLabels include label in edges
      * @throws ExportException
-     * @throws IOException
      */
-    @Throws(IOException::class)
     fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean = true) {
         val exporter = DOTExporter<String, CredibilityObject>(
                 ComponentNameProvider<String> { it.toString() }, null,
@@ -107,9 +105,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * .graphml extension.
      *
      * @param fileName
-     * @throws IOException
      */
-    @Throws(IOException::class)
     fun exportGraphML(fileName: String) {
         val exporter = GraphMLExporter<String, CredibilityObject>().apply {
             setVertexIDProvider({ it.toString() })
@@ -129,23 +125,11 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Compares [source] to [target] and returns a Comparison
-     *
-     * @param source node
-     * @param target node
-     * @return [Comparison.INCOMPARABLE], [Comparison.MORE], or [Comparison.INCOMPARABLE]
+     * Returns true iff [source] < [target] in the transitive closure; false otherwise
      */
-    internal fun compare(source: String, target: String): Comparison {
-        val source2target = finder.getAllPaths(source, target, true, null)
-        val target2source = finder.getAllPaths(target, source, true, null)
-
-        return when {
-            source2target.isEmpty() && target2source.isEmpty() -> Comparison.INCOMPARABLE
-            source2target.isNotEmpty() && target2source.isEmpty() -> Comparison.LESS
-            source2target.isEmpty() && target2source.isNotEmpty() -> Comparison.MORE
-            else -> throw IllegalStateException("Cycle: $source-$target-$source")
-        }
-    }
+    internal fun isLess(source: String, target: String): Boolean = graph.containsVertex(source) &&
+            graph.containsVertex(target) &&
+            finder.getAllPaths(source, target, true, null).isNotEmpty()
 
     /**
      * Finds all paths between given source and target vertex
@@ -158,26 +142,16 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
             finder.getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
 
     /**
-     * Expands the graph by adding a new edge from source to target that is provided by the reporter.
-     *
-     * @param obj credibility object to be added
+     * Expands the graph by adding an edge from the [CredibilityObject] [obj].
      * @return true on success, false otherwise
      */
-    fun expansion(obj: CredibilityObject): Boolean {
-        if (graph.containsVertex(obj.source) && graph.containsVertex(obj.target)) {
-            val reversePathExists = finder
-                    .getAllPaths(obj.target, obj.source, true, null)
-                    .isEmpty()
-                    .not()
-
-            if (reversePathExists) {
-                return false
-            }
+    fun expansion(obj: CredibilityObject): Boolean = when {
+        !isLess(obj.target, obj.source) -> {
+            graph.addVertex(obj.source)
+            graph.addVertex(obj.target)
+            graph.addEdge(obj.source, obj.target, obj)
         }
-
-        graph.addVertex(obj.source)
-        graph.addVertex(obj.target)
-        return graph.addEdge(obj.source, obj.target, obj)
+        else -> false
     }
 
     /**
@@ -191,26 +165,20 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     internal fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
             getAllPaths(source, target) // get all paths
                     .flatMap { getExtremes(it.edgeList, type) } // get extreme(s) of each path
-                    .toSet() // convert to set
+                    .toSet() // convert isSmaller set
 
 
     /**
-     * Find extremes in a collection of CredibilityObjects. Use given graph to determine the
+     * Find extremes in a collection of CredibilityObjects. Use given graph isSmaller determine the
      * reliability of credibility objects.
      *
      * @param objects collection of credibility objects
      * @param extreme the type of extreme
-     * @param graph to measure reliability of credibility objects
+     * @param graph isSmaller measure reliability of credibility objects
      * @return set of credibility objects that have extreme reliability
      */
     internal fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
                              graph: CredibilityGraph = this): Set<CredibilityObject> {
-        /*objects.fold(Collections.EMPTY_SET) { acc, e ->
-            TODO()
-        }
-
-        TODO()*/
-
         val finder = if (graph == this) finder else AllDirectedPaths(graph.graph)
         val filtered = HashSet(objects)
 
@@ -248,27 +216,28 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
         return filtered
     }
 
-    fun min(current: Set<CredibilityObject>, co: CredibilityObject): Set<CredibilityObject> {
-        val allPaths = current.map {
-            it to Pair(
-                    finder.getAllPaths(it.reporter, co.reporter, true, null).isNotEmpty(),
-                    finder.getAllPaths(co.reporter, it.reporter, true, null).isNotEmpty()
-            )
+    /**
+     * Compares [current] with [o] and returns whichever is bigger:
+     *  * if [o] is bigger than all elements in [current], returns a singleton set of [o]
+     *  * if [o] is smaller than all elements in [current], returns [current]
+     *  * if [o] is bigger than some in [current] and incomparable to the remaining, returns union of [o] and remaining
+     */
+    internal fun max(current: Set<CredibilityObject>, o: CredibilityObject): Set<CredibilityObject> {
+        data class ComputedComparisons(val reporter: CredibilityObject, val isLess: Boolean, val isMore: Boolean)
+
+        val existing = current.map {
+            ComputedComparisons(it, isLess(it.reporter, o.reporter), isLess(o.reporter, it.reporter))
         }
 
-        val incomparableToAll = allPaths.all { !it.second.first && !it.second.second }
-        if (incomparableToAll) return current + co
-
-        val greaterThanAll = allPaths.all { it.second.first && !it.second.second }
-        if (greaterThanAll) return current
-
-        // current.filter {  }
-
-        TODO("Have to implement min")
+        return when {
+            existing.all { it.isLess && !it.isMore } -> setOf(o) // o is bigger than all
+            existing.all { !it.isLess && it.isMore } -> current // o is less than all
+            else -> existing.filter { !it.isLess && !it.isMore }.map { it.reporter }.toSet() + o
+        }
     }
 
     /**
-     * Removes all paths from source to target by removing the minimal number of credibility objects.
+     * Removes all paths from source isSmaller target by removing the minimal number of credibility objects.
      *
      * @param source
      * @param target
@@ -279,10 +248,10 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Adds the provided credibility object to the knowledge-base, and assures the latter
+     * Adds the provided credibility object isSmaller the knowledge-base, and assures the latter
      * is consistent
      *
-     * @param obj credibility object to be added
+     * @param obj credibility object isSmaller be added
      * @return true on success, false otherwise
      */
     fun prioritizedRevision(obj: CredibilityObject): Boolean {
@@ -307,14 +276,14 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Revises the knowledge-base by trying to add given credibility object.
+     * Revises the knowledge-base by trying isSmaller add given credibility object.
      *
      * The revision succeeds iff:
      *  * it does not contradict current knowledge-base, or
      *  * it contradicts the current knowledge-base but the reliability of the
      * new information is higher.
      *
-     * @param obj credibility object to be added
+     * @param obj credibility object isSmaller be added
      * @return true on success, false otherwise
      */
     fun nonPrioritizedRevision(obj: CredibilityObject): Boolean {

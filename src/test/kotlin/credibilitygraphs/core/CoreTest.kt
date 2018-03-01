@@ -273,37 +273,102 @@ class CoreTest {
     }
 
     @Test
-    fun comparable() {
-        assertEquals(Comparison.LESS, graph!!.compare("A1", "A2"))
-        assertEquals(Comparison.LESS, graph!!.compare("A1", "A4"))
-        assertEquals(Comparison.LESS, graph!!.compare("A1", "A3"))
-        assertEquals(Comparison.LESS, graph!!.compare("A3", "A4"))
-        assertEquals(Comparison.LESS, graph!!.compare("A2", "A4"))
+    fun isLess() {
+        assertTrue(graph!!.isLess("A1", "A2"))
+        assertTrue(graph!!.isLess("A1", "A4"))
+        assertTrue(graph!!.isLess("A1", "A3"))
+        assertTrue(graph!!.isLess("A3", "A4"))
+        assertTrue(graph!!.isLess("A2", "A4"))
 
-        assertEquals(Comparison.MORE, graph!!.compare("A2", "A1"))
-        assertEquals(Comparison.MORE, graph!!.compare("A4", "A1"))
-        assertEquals(Comparison.MORE, graph!!.compare("A3", "A1"))
-        assertEquals(Comparison.MORE, graph!!.compare("A4", "A3"))
-        assertEquals(Comparison.MORE, graph!!.compare("A4", "A2"))
+        assertFalse(graph!!.isLess("A2", "A1"))
+        assertFalse(graph!!.isLess("A4", "A1"))
+        assertFalse(graph!!.isLess("A3", "A1"))
+        assertFalse(graph!!.isLess("A4", "A3"))
+        assertFalse(graph!!.isLess("A4", "A2"))
 
-        assertEquals(Comparison.LESS, graph!!.compare("B", "F1"))
-        assertEquals(Comparison.LESS, graph!!.compare("B", "F2"))
-        assertEquals(Comparison.LESS, graph!!.compare("B", "F3"))
-        assertEquals(Comparison.LESS, graph!!.compare("F1", "F2"))
-        assertEquals(Comparison.LESS, graph!!.compare("F1", "F3"))
-        assertEquals(Comparison.LESS, graph!!.compare("F2", "F3"))
+        assertTrue(graph!!.isLess("B", "F1"))
+        assertTrue(graph!!.isLess("B", "F2"))
+        assertTrue(graph!!.isLess("B", "F3"))
+        assertTrue(graph!!.isLess("F1", "F2"))
+        assertTrue(graph!!.isLess("F1", "F3"))
+        assertTrue(graph!!.isLess("F2", "F3"))
 
-        assertEquals(Comparison.MORE, graph!!.compare("F1", "B"))
-        assertEquals(Comparison.MORE, graph!!.compare("F2", "B"))
-        assertEquals(Comparison.MORE, graph!!.compare("F3", "B"))
-        assertEquals(Comparison.MORE, graph!!.compare("F2", "F1"))
-        assertEquals(Comparison.MORE, graph!!.compare("F3", "F1"))
-        assertEquals(Comparison.MORE, graph!!.compare("F3", "F2"))
+        assertFalse(graph!!.isLess("F1", "B"))
+        assertFalse(graph!!.isLess("F2", "B"))
+        assertFalse(graph!!.isLess("F3", "B"))
+        assertFalse(graph!!.isLess("F2", "F1"))
+        assertFalse(graph!!.isLess("F3", "F1"))
+        assertFalse(graph!!.isLess("F3", "F2"))
 
         for (g1 in listOf("A1", "A2", "A3", "A4")) {
             for (g2 in listOf("F1", "F2", "F3", "B")) {
-                assertEquals(Comparison.INCOMPARABLE, graph!!.compare(g1, g2))
+                assertFalse(graph!!.isLess(g1, g2))
             }
         }
+    }
+
+    @Test
+    fun maxCurrentEmpty() {
+        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z)")
+        val current = setOf<CredibilityObject>()
+        val co = CredibilityObject("A", "B", "X")
+
+        val expected = setOf(co)
+        val actual = graph.max(current, co)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun maxCurrentSmaller() {
+        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z)")
+        val current = setOf(CredibilityObject("1", "4", "C"))
+        val co = CredibilityObject("2", "3", "D")
+
+        val expected = setOf(co)
+        val actual = graph.max(current, co)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun maxCurrentBigger() {
+        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z)")
+        val current = setOf(CredibilityObject("1", "4", "D"))
+        val co = CredibilityObject("2", "3", "C")
+
+        val expected = current
+        val actual = graph.max(current, co)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun maxCurrentIncomparable() {
+        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W)")
+        val current = setOf(CredibilityObject("1", "4", "D"))
+        // D and E are incomparable
+        val co = CredibilityObject("2", "3", "E")
+
+        val expected = current + co
+        val actual = graph.max(current, co)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun maxCurrentIncomparableToSomeBiggerToOthers() {
+        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W), (E, F, U)")
+        val current = setOf(
+                CredibilityObject("1", "4", "D"),
+                CredibilityObject("4", "47", "E")
+                )
+        // D and E are incomparable
+        val co = CredibilityObject("2", "3", "F")
+
+        val expected = setOf(co, CredibilityObject("1", "4", "D"))
+        val actual = graph.max(current, co)
+
+        assertEquals(expected, actual)
     }
 }
