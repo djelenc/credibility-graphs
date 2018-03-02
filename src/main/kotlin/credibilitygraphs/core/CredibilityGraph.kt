@@ -27,7 +27,7 @@ import java.io.IOException
 import java.util.*
 
 /**
- * Represents a credibility object with source, target and a reporter.
+ * Represents a credibility object with [source], [target] and a [reporter].
  *
  * In a credibility graph, the credibility object is effectively an edge between
  * source and target with the reporter being its label.
@@ -122,19 +122,20 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     /**
      * Returns true iff [source] < [target] in the transitive closure; false otherwise
      */
-    internal fun isLess(source: String, target: String): Boolean = graph.containsVertex(source) &&
-            graph.containsVertex(target) &&
-            finder.getAllPaths(source, target, true, null).isNotEmpty()
+    internal fun isLess(source: String, target: String, graph: CredibilityGraph = this): Boolean {
+        val algorithm = if (graph == this) this.finder else AllDirectedPaths(graph.graph)
+        return graph.graph.containsVertex(source) &&
+                graph.graph.containsVertex(target) &&
+                algorithm.getAllPaths(source, target, true, null).isNotEmpty()
+
+    }
 
     /**
-     * Finds all paths between given source and target vertex
-     *
-     * @param sourceVertex
-     * @param targetVertex
-     * @return
+     * Finds all paths between given [source] and [target] vertex
+     * @return A list of paths
      */
-    internal fun getAllPaths(sourceVertex: String, targetVertex: String): List<GraphPath<String, CredibilityObject>> =
-            finder.getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
+    internal fun getAllPaths(source: String, target: String): List<GraphPath<String, CredibilityObject>> =
+            finder.getAllPaths(source, target, false, graph.edgeSet().size)
 
     /**
      * Expands the knowledge-base by adding given [credibilityObject]. The expansion fails the [credibilityObject]
@@ -151,18 +152,14 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Find extremes (w.r.t the credibility of reporters) on all paths between source and target.
-     *
-     * @param source node
-     * @param target node
-     * @param type of extreme
-     * @return set extremes
+     * Find extremes ([Extreme.MIN] or [Extreme.MAX]) (w.r.t the credibility of reporters) on all paths between
+     * [source] and [target].
+     * @return set of extremes
      */
     internal fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
             getAllPaths(source, target) // get all paths
                     .flatMap { getExtremes(it.edgeList, type) } // get extreme(s) of each path
                     .toSet() // convert to set
-
 
     /**
      * Get extreme credibility objects (w.r.t. reliability of reporters) from a collection of credibility [objects].
@@ -170,12 +167,12 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      */
     internal fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
                              graph: CredibilityGraph = this): Set<CredibilityObject> =
-            objects.fold(setOf(), { acc, credibilityObject -> extreme(acc, credibilityObject, extreme) })
+            objects.fold(setOf(), { acc, credibilityObject -> extreme(acc, credibilityObject, extreme, graph) })
 
 
     /**
      * Compares all objects in [set] with [credibilityObject] and returns whichever is more extreme
-     * (bigger or smaller):
+     * (bigger or smaller) according to the [graph]:
      *  * if [credibilityObject] is bigger (smaller) than all elements in [set], returns a singleton set of
      *  [credibilityObject];
      *  * if [credibilityObject] is smaller (bigger) than all elements in [set], returns [set];
@@ -185,13 +182,13 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      *  comparable elements.
      */
     internal fun extreme(set: Set<CredibilityObject>, credibilityObject: CredibilityObject,
-                         extreme: Extreme): Set<CredibilityObject> {
+                         extreme: Extreme, graph: CredibilityGraph): Set<CredibilityObject> {
         data class ComparisonToCredibilityObject(val obj: CredibilityObject, val isLess: Boolean, val isMore: Boolean)
 
         val existing = set.map {
             ComparisonToCredibilityObject(obj = it,
-                    isLess = isLess(it.reporter, credibilityObject.reporter),
-                    isMore = isLess(credibilityObject.reporter, it.reporter))
+                    isLess = isLess(it.reporter, credibilityObject.reporter, graph),
+                    isMore = isLess(credibilityObject.reporter, it.reporter, graph))
         }
 
         return when (extreme) {

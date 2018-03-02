@@ -314,7 +314,7 @@ class CoreTest {
         val co = CredibilityObject("A", "B", "X")
 
         val expected = setOf(co)
-        val actual = graph.extreme(current, co, Extreme.MAX)
+        val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
         assertEquals(expected, actual)
     }
@@ -326,7 +326,7 @@ class CoreTest {
         val co = CredibilityObject("2", "3", "D")
 
         val expected = setOf(co)
-        val actual = graph.extreme(current, co, Extreme.MAX)
+        val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
         assertEquals(expected, actual)
     }
@@ -337,7 +337,7 @@ class CoreTest {
         val current = setOf(CredibilityObject("1", "4", "D"))
         val co = CredibilityObject("2", "3", "C")
 
-        val actual = graph.extreme(current, co, Extreme.MAX)
+        val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
         assertEquals(current, actual)
     }
@@ -350,7 +350,7 @@ class CoreTest {
         val co = CredibilityObject("2", "3", "E")
 
         val expected = current + co
-        val actual = graph.extreme(current, co, Extreme.MAX)
+        val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
         assertEquals(expected, actual)
     }
@@ -366,7 +366,7 @@ class CoreTest {
         val co = CredibilityObject("2", "3", "F")
 
         val expected = setOf(co, CredibilityObject("1", "4", "D"))
-        val actual = graph.extreme(current, co, Extreme.MAX)
+        val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
         assertEquals(expected, actual)
     }
@@ -381,7 +381,7 @@ class CoreTest {
         // D and E are incomparable
         val co = CredibilityObject("2", "3", "E")
 
-        val actual = graph.extreme(current, co, Extreme.MAX)
+        val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
         assertEquals(current, actual)
     }
@@ -397,7 +397,7 @@ class CoreTest {
         val co = CredibilityObject("2", "3", "D")
 
         val expected = setOf(CredibilityObject("4", "8", "C"), co)
-        val actual = graph.extreme(current, co, Extreme.MAX)
+        val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
         assertEquals(expected, actual)
     }
