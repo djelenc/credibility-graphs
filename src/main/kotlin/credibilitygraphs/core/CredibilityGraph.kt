@@ -142,14 +142,15 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
             finder.getAllPaths(sourceVertex, targetVertex, false, graph.edgeSet().size)
 
     /**
-     * Expands the graph by adding an edge from the [CredibilityObject] [obj].
+     * Expands the knowledge-base by adding given [credibilityObject]. The expansion fails the [credibilityObject]
+     * contradicts current knowledge-base.
      * @return true on success, false otherwise
      */
-    fun expansion(obj: CredibilityObject): Boolean = when {
-        !isLess(obj.target, obj.source) -> {
-            graph.addVertex(obj.source)
-            graph.addVertex(obj.target)
-            graph.addEdge(obj.source, obj.target, obj)
+    fun expansion(credibilityObject: CredibilityObject): Boolean = when {
+        !isLess(credibilityObject.target, credibilityObject.source) -> {
+            graph.addVertex(credibilityObject.source)
+            graph.addVertex(credibilityObject.target)
+            graph.addEdge(credibilityObject.source, credibilityObject.target, credibilityObject)
         }
         else -> false
     }
@@ -217,30 +218,34 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Compares [current] with [o] and returns whichever is bigger:
-     *  * if [o] is bigger than all elements in [current], returns a singleton set of [o]
-     *  * if [o] is smaller than all elements in [current], returns [current]
-     *  * if [o] is bigger than some in [current] and incomparable to the remaining, returns union of [o] and remaining
+     * Compares [current] with [credibilityObject] and returns whichever is bigger:
+     *  * if [credibilityObject] is bigger than all elements in [current], returns a singleton set of
+     *  [credibilityObject]
+     *  * if [credibilityObject] is smaller than all elements in [current], returns [current]
+     *  * if [credibilityObject] is bigger than some in [current] and incomparable to the remaining,
+     *  returns union of [credibilityObject] and remaining
      */
-    internal fun max(current: Set<CredibilityObject>, o: CredibilityObject): Set<CredibilityObject> {
+    internal fun max(current: Set<CredibilityObject>, credibilityObject: CredibilityObject): Set<CredibilityObject> {
         data class ComputedComparisons(val reporter: CredibilityObject, val isLess: Boolean, val isMore: Boolean)
 
         val existing = current.map {
-            ComputedComparisons(it, isLess(it.reporter, o.reporter), isLess(o.reporter, it.reporter))
+            ComputedComparisons(it,
+                    isLess(it.reporter, credibilityObject.reporter),
+                    isLess(credibilityObject.reporter, it.reporter))
         }
 
         return when {
-            existing.all { it.isLess && !it.isMore } -> setOf(o) // o is bigger than all
-            existing.all { !it.isLess && it.isMore } -> current // o is less than all
-            else -> existing.filter { !it.isLess && !it.isMore }.map { it.reporter }.toSet() + o
+        // credibilityObject is bigger than all
+            existing.all { it.isLess && !it.isMore } -> setOf(credibilityObject)
+        // credibilityObject is less than all
+            existing.all { !it.isLess && it.isMore } -> current
+        // credibilityObject si bigger than some and incomparable to the rest
+            else -> existing.filter { !it.isLess && !it.isMore }.map { it.reporter }.toSet() + credibilityObject
         }
     }
 
     /**
-     * Removes all paths from source isSmaller target by removing the minimal number of credibility objects.
-     *
-     * @param source
-     * @param target
+     * Removes all paths from [source] to [target] by removing the minimal number of credibility objects.
      */
     fun contraction(source: String, target: String) {
         val toRemove = getExtremes(source, target, Extreme.MIN)
@@ -248,10 +253,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Adds the provided credibility object isSmaller the knowledge-base, and assures the latter
-     * is consistent
-     *
-     * @param obj credibility object isSmaller be added
+     * Adds the [obj]ect to the knowledge-base, and assures the latter is consistent
      * @return true on success, false otherwise
      */
     fun prioritizedRevision(obj: CredibilityObject): Boolean {
@@ -260,13 +262,8 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Estimates the reliability of source being less credible than the target.
-     * The reliability is denoted with the set of least credible reporters
-     * that claim the source is less credible than the target.
-     *
-     * @param source
-     * @param target
-     * @return
+     * Estimates the reliability of [source] being less than the [target].
+     * @return the set of reporters claiming the [source] is less than the [target].
      */
     internal fun reliability(source: String, target: String): Set<String> {
         val minimalSources = getExtremes(source, target, Extreme.MIN)
@@ -276,26 +273,18 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Revises the knowledge-base by trying isSmaller add given credibility object.
-     *
-     * The revision succeeds iff:
-     *  * it does not contradict current knowledge-base, or
-     *  * it contradicts the current knowledge-base but the reliability of the
-     * new information is higher.
-     *
-     * @param obj credibility object isSmaller be added
+     * Revises the knowledge-base by adding given [credibilityObject]. The revision succeeds iff
+     * the new [credibilityObject]:
+     *  * does not contradict current knowledge-base, or
+     *  * it does contradict the current knowledge-base but the reliability of the [credibilityObject] is higher.
      * @return true on success, false otherwise
      */
-    fun nonPrioritizedRevision(obj: CredibilityObject): Boolean {
-        val reliabilityOfOpposite = reliability(obj.target, obj.source)
-        val objIsMoreReliable = reliabilityOfOpposite.all {
-            finder.getAllPaths(it, obj.reporter, true, null).isNotEmpty()
-            // Q: what if the reporter and it are incomparable?
-            // A: objects from incomparable reporters are not added
-        }
+    fun nonPrioritizedRevision(credibilityObject: CredibilityObject): Boolean {
+        val reliabilityOfOpposite = reliability(credibilityObject.target, credibilityObject.source)
+        val objIsMoreReliable = reliabilityOfOpposite.all { isLess(it, credibilityObject.reporter) }
 
         return if (objIsMoreReliable) {
-            prioritizedRevision(obj)
+            prioritizedRevision(credibilityObject)
         } else {
             false
         }
