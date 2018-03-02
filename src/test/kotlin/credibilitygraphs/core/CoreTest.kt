@@ -13,16 +13,16 @@ import kotlin.test.assertTrue
 
 class CoreTest {
 
-    private val EXAMPLE2 = "(B,F1,F2),(F1,F2,F3),(F2,F3,B),(A1,A2,F1),(A1,A3,F1),(A2,A4,B),(A2,A4,F3),(A3,A4,F2)"
-    private val EXAMPLE5 = "(D,F,J),(D,H,L),(F,G,M),(H,G,M),(G,E,K),(J,K,E),(K,L,G),(L,M,E)"
-    private val EXAMPLE13 = "(H,I,F),(H,L,D),(H,J,G),(I,L,G),(J,L,E),(J,L,F),(J,K,D)," +
+    private val example2 = "(B,F1,F2),(F1,F2,F3),(F2,F3,B),(A1,A2,F1),(A1,A3,F1),(A2,A4,B),(A2,A4,F3),(A3,A4,F2)"
+    // private val example5 = "(D,F,J),(D,H,L),(F,G,M),(H,G,M),(G,E,K),(J,K,E),(K,L,G),(L,M,E)"
+    private val example13 = "(H,I,F),(H,L,D),(H,J,G),(I,L,G),(J,L,E),(J,L,F),(J,K,D)," +
             "(J,K,E),(K,L,D),(D,E,G),(D,F,E),(E,G,F),(F,G,D)"
 
     private var graph: CredibilityGraph? = null
 
     @Before
     fun setUp() {
-        graph = CredibilityGraph(EXAMPLE2)
+        graph = CredibilityGraph(example2)
     }
 
     @Test
@@ -163,7 +163,7 @@ class CoreTest {
 
     @Test
     fun nonPrioritizedRevisionMoreCredibleObjectMultipleReliabilities() {
-        val graph = CredibilityGraph(EXAMPLE13)
+        val graph = CredibilityGraph(example13)
         assertTrue(graph.nonPrioritizedRevision(CredibilityObject("L", "H", "G")))
 
         val expected = HashSet<CredibilityObject>()
@@ -182,7 +182,7 @@ class CoreTest {
 
     @Test
     fun copy() {
-        val graph1 = CredibilityGraph(EXAMPLE2)
+        val graph1 = CredibilityGraph(example2)
         val graph2 = graph1.copy()
 
         val edges1 = graph1.graph.edgeSet()
@@ -314,7 +314,7 @@ class CoreTest {
         val co = CredibilityObject("A", "B", "X")
 
         val expected = setOf(co)
-        val actual = graph.max(current, co)
+        val actual = graph.extreme(current, co, Extreme.MAX)
 
         assertEquals(expected, actual)
     }
@@ -326,7 +326,7 @@ class CoreTest {
         val co = CredibilityObject("2", "3", "D")
 
         val expected = setOf(co)
-        val actual = graph.max(current, co)
+        val actual = graph.extreme(current, co, Extreme.MAX)
 
         assertEquals(expected, actual)
     }
@@ -337,10 +337,9 @@ class CoreTest {
         val current = setOf(CredibilityObject("1", "4", "D"))
         val co = CredibilityObject("2", "3", "C")
 
-        val expected = current
-        val actual = graph.max(current, co)
+        val actual = graph.extreme(current, co, Extreme.MAX)
 
-        assertEquals(expected, actual)
+        assertEquals(current, actual)
     }
 
     @Test
@@ -351,24 +350,80 @@ class CoreTest {
         val co = CredibilityObject("2", "3", "E")
 
         val expected = current + co
-        val actual = graph.max(current, co)
+        val actual = graph.extreme(current, co, Extreme.MAX)
 
         assertEquals(expected, actual)
     }
 
     @Test
-    fun maxCurrentIncomparableToSomeBiggerToOthers() {
+    fun maxCurrentIncomparableToSomeBiggerThanOthers() {
         val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W), (E, F, U)")
         val current = setOf(
                 CredibilityObject("1", "4", "D"),
                 CredibilityObject("4", "47", "E")
-                )
+        )
         // D and E are incomparable
         val co = CredibilityObject("2", "3", "F")
 
         val expected = setOf(co, CredibilityObject("1", "4", "D"))
-        val actual = graph.max(current, co)
+        val actual = graph.extreme(current, co, Extreme.MAX)
 
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun maxCurrentIncomparableToSomeSmallerThanSome() {
+        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W), (E, F, U)")
+        val current = setOf(
+                CredibilityObject("1", "4", "D"),
+                CredibilityObject("4", "47", "F")
+        )
+        // D and E are incomparable
+        val co = CredibilityObject("2", "3", "E")
+
+        val actual = graph.extreme(current, co, Extreme.MAX)
+
+        assertEquals(current, actual)
+    }
+
+    @Test
+    fun maxCurrentIncomparableToSomeBiggerThanSome() {
+        val graph = CredibilityGraph("(A, D, Y), (B, D, Y), (E, A, Y), (E, B, Y), (E, C, Y)")
+        val current = setOf(
+                CredibilityObject("1", "4", "A"),
+                CredibilityObject("4", "7", "B"),
+                CredibilityObject("4", "8", "C")
+        )
+        val co = CredibilityObject("2", "3", "D")
+
+        val expected = setOf(CredibilityObject("4", "8", "C"), co)
+        val actual = graph.extreme(current, co, Extreme.MAX)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun getExtremeFromCollection() {
+        val graph = CredibilityGraph("(A, D, Y), (B, D, Y), (E, A, Y), (E, B, Y), (E, C, Y)")
+
+        val collection = setOf(
+                CredibilityObject("1", "2", "A"),
+                CredibilityObject("3", "4", "B"),
+                CredibilityObject("5", "6", "C"),
+                CredibilityObject("7", "8", "D"),
+                CredibilityObject("9", "0", "E")
+        )
+
+        val expectedMax = setOf(
+                CredibilityObject("7", "8", "D"),
+                CredibilityObject("5", "6", "C"))
+        val actualMax = graph.getExtremes(collection, Extreme.MAX)
+
+        assertEquals(expectedMax, actualMax)
+
+        val expectedMin = setOf(CredibilityObject("9", "0", "E"))
+        val actualMin = graph.getExtremes(collection, Extreme.MIN)
+
+        assertEquals(expectedMin, actualMin)
     }
 }

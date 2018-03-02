@@ -40,11 +40,6 @@ enum class Extreme {
     MIN, MAX
 }
 
-enum class Comparison {
-    LESS, MORE, INCOMPARABLE
-}
-
-
 /**
  * Represents a knowledge-base of credibility objects
  */
@@ -166,81 +161,60 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     internal fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
             getAllPaths(source, target) // get all paths
                     .flatMap { getExtremes(it.edgeList, type) } // get extreme(s) of each path
-                    .toSet() // convert isSmaller set
+                    .toSet() // convert to set
 
 
     /**
-     * Find extremes in a collection of CredibilityObjects. Use given graph isSmaller determine the
-     * reliability of credibility objects.
-     *
-     * @param objects collection of credibility objects
-     * @param extreme the type of extreme
-     * @param graph isSmaller measure reliability of credibility objects
-     * @return set of credibility objects that have extreme reliability
+     * Get extreme credibility objects (w.r.t. reliability of reporters) from a collection of credibility [objects].
+     * @return Set of credibility objects that have extreme reliability
      */
     internal fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
-                             graph: CredibilityGraph = this): Set<CredibilityObject> {
-        val finder = if (graph == this) finder else AllDirectedPaths(graph.graph)
-        val filtered = HashSet(objects)
+                             graph: CredibilityGraph = this): Set<CredibilityObject> =
+            objects.fold(setOf(), { acc, credibilityObject -> extreme(acc, credibilityObject, extreme) })
 
-        for (one in objects) {
-            for (two in objects) {
-                if (one.reporter == two.reporter) {
-                    continue
-                }
-
-                val one2two = finder.getAllPaths(
-                        one.reporter, two.reporter, true, null)
-                val two2one = finder.getAllPaths(
-                        two.reporter, one.reporter, true, null)
-
-                if (one2two.isEmpty() && two2one.isEmpty()) {
-                    continue
-                }
-
-                if (extreme == Extreme.MAX) {
-                    if (!one2two.isEmpty()) {
-                        filtered.remove(one)
-                    } else {
-                        filtered.remove(two)
-                    }
-                } else {
-                    if (one2two.isEmpty()) {
-                        filtered.remove(one)
-                    } else {
-                        filtered.remove(two)
-                    }
-                }
-            }
-        }
-
-        return filtered
-    }
 
     /**
-     * Compares [current] with [credibilityObject] and returns whichever is bigger:
-     *  * if [credibilityObject] is bigger than all elements in [current], returns a singleton set of
-     *  [credibilityObject]
-     *  * if [credibilityObject] is smaller than all elements in [current], returns [current]
-     *  * if [credibilityObject] is bigger than some in [current] and incomparable to the remaining,
-     *  returns union of [credibilityObject] and remaining
+     * Compares all objects in [set] with [credibilityObject] and returns whichever is more extreme
+     * (bigger or smaller):
+     *  * if [credibilityObject] is bigger (smaller) than all elements in [set], returns a singleton set of
+     *  [credibilityObject];
+     *  * if [credibilityObject] is smaller (bigger) than all elements in [set], returns [set];
+     *  * if [credibilityObject] is incomparable to all elements in [set], returns [set] and [credibilityObject];
+     *  * if [credibilityObject] is bigger (smaller) than some in [set] and incomparable to the remaining,
+     *  returns all incomparable elements plus the biggest (smalles) among [credibilityObject] and the remaining
+     *  comparable elements.
      */
-    internal fun max(current: Set<CredibilityObject>, credibilityObject: CredibilityObject): Set<CredibilityObject> {
-        data class ComputedComparisons(val reporter: CredibilityObject, val isLess: Boolean, val isMore: Boolean)
+    internal fun extreme(set: Set<CredibilityObject>, credibilityObject: CredibilityObject,
+                         extreme: Extreme): Set<CredibilityObject> {
+        data class ComparisonToCredibilityObject(val obj: CredibilityObject, val isLess: Boolean, val isMore: Boolean)
 
-        val existing = current.map {
-            ComputedComparisons(it,
-                    isLess(it.reporter, credibilityObject.reporter),
-                    isLess(credibilityObject.reporter, it.reporter))
+        val existing = set.map {
+            ComparisonToCredibilityObject(obj = it,
+                    isLess = isLess(it.reporter, credibilityObject.reporter),
+                    isMore = isLess(credibilityObject.reporter, it.reporter))
         }
 
-        return when {
-        // credibilityObject is bigger than all
-            existing.all { it.isLess && !it.isMore } -> setOf(credibilityObject)
-        // credibilityObject is less than all
-            existing.all { !it.isLess && it.isMore } -> current
-        // credibilityObject si bigger than some and incomparable to the rest
-            else -> existing.filter { !it.isLess && !it.isMore }.map { it.reporter }.toSet() + credibilityObject
+        return when (extreme) {
+            Extreme.MAX -> when {
+                existing.all { it.isLess && !it.isMore } -> setOf(credibilityObject) // bigger than all in set
+                existing.all { it.isMore && !it.isLess } -> set // smaller than all in set
+                existing.all { !it.isLess && !it.isMore } -> set + credibilityObject // incomparable to all in set
+                else -> { // bigger than some
+                    val incomparable = existing.filter { !it.isLess && !it.isMore }.map { it.obj }
+                    val more = existing.filter { it.isMore }.map { it.obj }
+                    if (more.isEmpty()) incomparable.plus(credibilityObject).toSet() else set
+                }
+            }
+            Extreme.MIN -> when {
+                existing.all { it.isMore && !it.isLess } -> setOf(credibilityObject)
+                existing.all { it.isLess && !it.isMore } -> set
+                existing.all { !it.isLess && !it.isMore } -> set + credibilityObject
+                else -> {
+                    val incomparable = existing.filter { !it.isLess && !it.isMore }.map { it.obj }
+                    val less = existing.filter { it.isLess }.map { it.obj }
+                    if (less.isEmpty()) incomparable.plus(credibilityObject).toSet() else set
+                }
+            }
         }
     }
 

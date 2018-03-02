@@ -12,7 +12,7 @@ object App {
             "(J,K,E),(K,L,D),(D,E,G),(D,F,E),(E,G,F),(F,G,D)"
 
     fun basic() {
-        val graph = CredibilityGraph(EXAMPLE2)
+        /*val graph = CredibilityGraph(EXAMPLE2)
         graph.exportDOT("./fig-1", Format.PNG)
 
         graph.expansion(CredibilityObject("C", "F1", "B"))
@@ -25,7 +25,7 @@ object App {
         graph.exportDOT("./fig-4-npr-revision", Format.PNG)
 
         graph.prioritizedRevision(CredibilityObject("A4", "A1", "B"))
-        graph.exportDOT("./fig-5-pr-revision", Format.PNG)
+        graph.exportDOT("./fig-5-pr-revision", Format.PNG)*/
 
         val graph2 = CredibilityGraph(EXAMPLE13)
         graph2.exportDOT("./fig-6", Format.PNG)
@@ -67,13 +67,14 @@ fun main(args: Array<String>) {
     // App.opinions();
     // App.informants();
 
-    val graph = CredibilityGraph("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
+    /*val graph = CredibilityGraph("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
     graph.exportDOT("./g1", Format.PNG)
 
     val newGraph = CredibilityGraph("(A, C, E), (C, D, B)")
     newGraph.exportDOT("./g2", Format.PNG)
 
     graph.merge(newGraph)
-    graph.exportDOT("./merged", Format.PNG)
+    graph.exportDOT("./merged", Format.PNG)*/
+    App.basic()
 }
 
