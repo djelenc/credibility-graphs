@@ -1,25 +1,21 @@
 package credibilitygraphs.model
 
-import testbed.interfaces.*
+import atb.interfaces.*
 import java.util.*
 
 
 class Know : TrustModel<Double> {
-    override fun getParametersPanel(): ParametersPanel? = null
-
-    override fun setRandomGenerator(generator: RandomGenerator?) {}
-
     // cumulative interaction outcomes
-    protected lateinit var exSum: DoubleArray
+    private lateinit var exSum: DoubleArray
 
     // interaction count
-    protected lateinit var exCnt: IntArray
+    private lateinit var exCnt: IntArray
 
     // received opinions
-    protected lateinit var op: Array<DoubleArray>
+    private lateinit var op: Array<DoubleArray>
 
     // computed reputation
-    protected lateinit var rep: DoubleArray
+    private lateinit var rep: DoubleArray
 
     override fun initialize(vararg params: Any) {
         exSum = DoubleArray(0)
@@ -38,10 +34,6 @@ class Know : TrustModel<Double> {
         for (o in opinions) {
             op[o.agent1][o.agent2] = o.internalTrustDegree
         }
-    }
-
-    override fun calculateTrust() {
-        // pass
     }
 
     override fun getTrust(service: Int): Map<Int, Double> {
@@ -69,43 +61,26 @@ class Know : TrustModel<Double> {
 
         // combine experiences and reputation into trust
         for (agent in exCnt.indices) {
-            var w_e = 0.0
-            var w_r = 0.0
-            var t = 0.0
-
             // compute weights
-            w_e = Math.min(exCnt[agent], 3) / 3.0
-            w_r = if (java.lang.Double.isNaN(rep[agent])) 0.0 else 1 - w_e
+            val expWeight = Math.min(exCnt[agent], 3) / 3.0
+            val opWeight = if (java.lang.Double.isNaN(rep[agent])) 0.0 else 1 - expWeight
 
             // aggregate data
-            if (w_e > 0 || w_r > 0) {
-                if (w_e > 0 && w_r > 0) { // experience & opinions
-                    t = w_e * exSum[agent] / exCnt[agent] + w_r * rep[agent]
-                } else if (w_r > 0) { // opinions only
-                    t = rep[agent]
-                } else { // only experiences
-                    t = exSum[agent] / exCnt[agent]
+            if (expWeight > 0 || opWeight > 0) {
+                trust[agent] = when {
+                // experience & opinions
+                    expWeight > 0 && opWeight > 0 -> expWeight * exSum[agent] / exCnt[agent] + opWeight * rep[agent]
+                    opWeight > 0 -> rep[agent] // opinions only
+                    else -> exSum[agent] / exCnt[agent] // only experiences
                 }
-
-                trust[agent] = t
             }
         }
 
         return trust
     }
 
-    override fun setCurrentTime(time: Int) {
-
-    }
-
     override fun setAgents(agents: List<Int>) {
-        // current size of opinions' data structure
-        var max = Math.max(op.size - 1, exSum.size - 1)
-
-        // find the maximum ID
-        for (agent in agents)
-            if (agent > max)
-                max = agent
+        val max = agents.max() ?: Math.max(op.size - 1, exSum.size - 1)
 
         // resize opinions' array
         if (max > op.size - 1) {
@@ -133,8 +108,15 @@ class Know : TrustModel<Double> {
         }
     }
 
-    override fun setServices(services: List<Int>) {}
-
     override fun toString(): String = "Kotlin Trust Model"
 
+    override fun getParametersPanel(): ParametersPanel? = null
+
+    override fun calculateTrust() = Unit
+
+    override fun setCurrentTime(time: Int) = Unit
+
+    override fun setServices(services: List<Int>) = Unit
+
+    override fun setRandomGenerator(generator: RandomGenerator) = Unit
 }
