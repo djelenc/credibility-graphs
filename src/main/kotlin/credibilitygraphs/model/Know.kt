@@ -1,7 +1,8 @@
 package credibilitygraphs.model
 
 import atb.interfaces.*
-import java.util.*
+import credibilitygraphs.core.CredibilityGraph
+import credibilitygraphs.core.CredibilityObject
 
 
 class Know : TrustModel<Double> {
@@ -23,17 +24,47 @@ class Know : TrustModel<Double> {
         op = Array(0) { DoubleArray(0) }
     }
 
-    override fun processExperiences(experiences: List<Experience>) {
-        for (e in experiences) {
+    private val experiences = LinkedHashMap<Int, Double>()
+    private val kb = CredibilityGraph()
+
+    override fun processExperiences(new: List<Experience>) {
+        for (e in new) {
             exSum[e.agent] += e.outcome
             exCnt[e.agent] += 1
+            experiences[e.agent] = exSum[e.agent] / exCnt[e.agent]
         }
+
+        // build KB with experiences
+        val sorted = experiences.toList()
+                .sortedBy { (_, value) -> value }
+                .toMap()
+
+        val iterator = sorted.iterator()
+        var (prevAgent, _) = iterator.next()
+
+        while (iterator.hasNext()) {
+            val (currentAgent, _) = iterator.next()
+            kb.expansion(CredibilityObject("$prevAgent", "$currentAgent", "EXP"))
+            prevAgent = currentAgent
+        }
+    }
+
+    override fun calculateTrust() {
+
     }
 
     override fun processOpinions(opinions: List<Opinion>) {
         for (o in opinions) {
             op[o.agent1][o.agent2] = o.internalTrustDegree
         }
+
+        val opinionGraphs = ArrayList<LinkedHashMap<Int, Double>>()
+        
+        for (reporter in op.indices) {
+            // create a graph
+
+        }
+
     }
 
     override fun getTrust(service: Int): Map<Int, Double> {
@@ -111,8 +142,6 @@ class Know : TrustModel<Double> {
     override fun toString(): String = "Kotlin Trust Model"
 
     override fun getParametersPanel(): ParametersPanel? = null
-
-    override fun calculateTrust() = Unit
 
     override fun setCurrentTime(time: Int) = Unit
 

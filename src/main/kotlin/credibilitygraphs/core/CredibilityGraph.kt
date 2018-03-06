@@ -47,7 +47,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     // finder finds paths between graph nodes
     private val finder = AllDirectedPaths(graph)
 
-    constructor(credibilityObjects: String) : this(parseObjects(credibilityObjects))
+    constructor(credibilityObjects: String = "") : this(parseObjects(credibilityObjects))
 
     companion object {
         /**
@@ -57,6 +57,11 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
          * @return directed multi-graph
          */
         fun parseObjects(graph: String): Graph<String, CredibilityObject> {
+            if (graph == "") {
+                // TODO: improve this!
+                return DirectedMultigraph<String, CredibilityObject>(CredibilityObject::class.java)
+            }
+
             val ais = ANTLRInputStream(graph)
             val lexer = GraphLexer(ais)
             val tokens = CommonTokenStream(lexer)
