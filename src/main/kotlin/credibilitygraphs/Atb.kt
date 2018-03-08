@@ -1,6 +1,6 @@
 package credibilitygraphs
 
-import atb.app.main
+import atb.app.gui.main
 
 fun main(args: Array<String>) = main(args)
 

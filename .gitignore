@@ -12,3 +12,5 @@
 *.svg
 *.graphml
 *.class
+*.json
+*.csv
