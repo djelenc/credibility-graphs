@@ -4,6 +4,7 @@ import atb.interfaces.*
 import credibilitygraphs.core.CredibilityGraph
 import credibilitygraphs.core.CredibilityObject
 
+const val EXP = 1337
 
 class Know : TrustModel<Double> {
     // cumulative interaction outcomes
@@ -12,20 +13,16 @@ class Know : TrustModel<Double> {
     // interaction count
     private lateinit var exCnt: IntArray
 
-    // received opinions
-    private lateinit var op: Array<DoubleArray>
-
     // computed reputation
     private lateinit var rep: DoubleArray
 
     override fun initialize(vararg params: Any) {
         exSum = DoubleArray(0)
         exCnt = IntArray(0)
-        op = Array(0) { DoubleArray(0) }
     }
 
     private val experiences = LinkedHashMap<Int, Double>()
-    private val kb = CredibilityGraph()
+    private var kb = CredibilityGraph()
 
     override fun processExperiences(new: List<Experience>) {
         for (e in new) {
@@ -34,19 +31,26 @@ class Know : TrustModel<Double> {
             experiences[e.agent] = exSum[e.agent] / exCnt[e.agent]
         }
 
-        // build KB with experiences
-        val sorted = experiences.toList()
+        // 1) sort agents by experiences
+        val sortedExperiences = experiences.asSequence()
+                .map { it.key to it.value }
                 .sortedBy { (_, value) -> value }
-                .toMap()
 
-        val iterator = sorted.iterator()
-        var (prevAgent, _) = iterator.next()
+        // 2) create a KB from experiences
+        val (mostCredible, experienceKB) = sortedExperiences.fold(Pair(-1, CredibilityGraph()), { acc, pair ->
+            val (prev, currentGraph) = acc
+            val (current, _) = pair
 
-        while (iterator.hasNext()) {
-            val (currentAgent, _) = iterator.next()
-            kb.expansion(CredibilityObject("$prevAgent", "$currentAgent", "EXP"))
-            prevAgent = currentAgent
-        }
+            if (prev != -1) {
+                val co = CredibilityObject(prev.toString(), current.toString(), EXP.toString())
+                currentGraph.expansion(co)
+            }
+
+            Pair(current, currentGraph)
+        })
+
+        experienceKB.expansion(CredibilityObject(mostCredible.toString(), EXP.toString(), EXP.toString()))
+        kb = experienceKB
     }
 
     override fun calculateTrust() {
@@ -54,78 +58,61 @@ class Know : TrustModel<Double> {
     }
 
     override fun processOpinions(opinions: List<Opinion>) {
-        for (o in opinions) {
-            op[o.agent1][o.agent2] = o.internalTrustDegree
+        println("EXP ONLY: ${kb.graph.edgeSet()}")
+
+        for (agent in agents) {
+            // all opinions where given agent is the source,
+            // sorted from the least to the most trustworthy target
+            val fromAgent = opinions.asSequence()
+                    .filter { it.agent1 == agent && it.agent1 != it.agent2 }
+                    .map { it.agent2 to it.internalTrustDegree }
+                    .sortedBy { (_, value) -> value }
+
+            // convert the list of opinions to an actual credibility base
+            val (_, opinionKB) = fromAgent.fold(Pair(-1, CredibilityGraph()), { acc, pair ->
+                val (prev, currentGraph) = acc
+                val (current, _) = pair
+
+                if (prev != -1) {
+                    val co = CredibilityObject(prev.toString(), current.toString(), agent.toString())
+                    currentGraph.expansion(co)
+                }
+
+                Pair(current, currentGraph)
+            })
+
+            kb.merge(opinionKB)
         }
 
-        val opinionGraphs = ArrayList<LinkedHashMap<Int, Double>>()
-        
-        for (reporter in op.indices) {
-            // create a graph
+        println("MERGED: ${kb.graph.edgeSet()}")
 
-        }
-
+        // println("OPS: ${opinionKB.graph.edgeSet()}")
+        // kb.merge(opinionKB)
+        //println(opinions.filter { it.agent1 == agent && it.agent1 != it.agent2 }.map { it.agent2 to it.internalTrustDegree })
+        //println(kbFromAgent.graph)
     }
 
     override fun getTrust(service: Int): Map<Int, Double> {
         val trust = LinkedHashMap<Int, Double>()
 
-        // compute reputations
-        rep = DoubleArray(exSum.size)
-
-        for (target in op.indices) {
-            var sum = 0.0
-            var count = 0
-
-            for (reporter in op.indices) {
-                if (!java.lang.Double.isNaN(op[reporter][target])) {
-                    sum += op[reporter][target]
-                    count += 1
-                }
-            }
-
-            if (count > 0)
-                rep[target] = sum / count
-            else
-                rep[target] = java.lang.Double.NaN
-        }
-
-        // combine experiences and reputation into trust
         for (agent in exCnt.indices) {
-            // compute weights
             val expWeight = Math.min(exCnt[agent], 3) / 3.0
-            val opWeight = if (java.lang.Double.isNaN(rep[agent])) 0.0 else 1 - expWeight
 
             // aggregate data
-            if (expWeight > 0 || opWeight > 0) {
-                trust[agent] = when {
-                // experience & opinions
-                    expWeight > 0 && opWeight > 0 -> expWeight * exSum[agent] / exCnt[agent] + opWeight * rep[agent]
-                    opWeight > 0 -> rep[agent] // opinions only
-                    else -> exSum[agent] / exCnt[agent] // only experiences
-                }
+            if (expWeight > 0) {
+                trust[agent] = exSum[agent] / exCnt[agent]
             }
         }
 
         return trust
     }
 
+    private var agents: List<Int> = emptyList()
+
     override fun setAgents(agents: List<Int>) {
-        val max = agents.max() ?: Math.max(op.size - 1, exSum.size - 1)
+        this.agents = agents
 
-        // resize opinions' array
-        if (max > op.size - 1) {
-            val newOp = Array(max + 1) { DoubleArray(max + 1) }
-
-            for (i in newOp.indices)
-                for (j in newOp.indices)
-                    newOp[i][j] = java.lang.Double.NaN
-
-            for (i in op.indices)
-                System.arraycopy(op[i], 0, newOp[i], 0, op.size)
-
-            op = newOp
-        }
+        val max = agents.max() ?: exSum.size-1
 
         // resize experiences' array
         if (max > exSum.size - 1) {

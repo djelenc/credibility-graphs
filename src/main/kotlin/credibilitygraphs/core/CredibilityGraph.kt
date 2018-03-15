@@ -117,7 +117,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
         }
 
         try {
-            exporter.exportGraph(graph, File(fileName + ".graphml"))
+            exporter.exportGraph(graph, File("$fileName.graphml"))
         } catch (e: ExportException) {
             throw IOException(e)
         }
