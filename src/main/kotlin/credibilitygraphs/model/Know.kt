@@ -5,7 +5,7 @@ import credibilitygraphs.core.CredibilityGraph
 import credibilitygraphs.core.CredibilityObject
 import guru.nidi.graphviz.engine.Format
 
-const val EXP = -1
+const val EXP = "exp"
 
 class Know : TrustModel<Double> {
     // cumulative interaction outcomes
@@ -40,7 +40,7 @@ class Know : TrustModel<Double> {
         val (_, experienceKB) = sortedExperiences.fold(
                 Pair(-1, CredibilityGraph()), { (prev, currentGraph), (current, _) ->
             if (prev != -1) {
-                val co = CredibilityObject(prev.toString(), current.toString(), EXP.toString())
+                val co = CredibilityObject(prev.toString(), current.toString(), EXP)
                 currentGraph.expansion(co)
             }
             Pair(current, currentGraph)
@@ -50,12 +50,12 @@ class Know : TrustModel<Double> {
 
         // debugging
         val experiencePrint = kb.copy()
-        experiencePrint.graph.removeVertex(EXP.toString())
+        experiencePrint.graph.removeVertex(EXP)
         experiencePrint.exportDOT("./tick-${time}-Experiences", Format.PNG)
 
         for (agent in agents) {
             // experiences are more a reliable source than this agent
-            kb.expansion(CredibilityObject(agent.toString(), EXP.toString(), EXP.toString()))
+            kb.expansion(CredibilityObject(agent.toString(), EXP, EXP))
 
             // all opinions from given agent, sorted by internal trust degrees
             val relevant = opinions.asSequence()
@@ -76,7 +76,7 @@ class Know : TrustModel<Double> {
 
             // only for debugging
             val opinionPrint = opinionKB.copy()
-            opinionPrint.graph.removeVertex(EXP.toString())
+            opinionPrint.graph.removeVertex(EXP)
             opinionPrint.exportDOT("./tick-${time}-Opinions-$agent", Format.PNG)
 
             // merge current KB with the KB from this agent
@@ -91,8 +91,8 @@ class Know : TrustModel<Double> {
 
     override fun getTrust(service: Int): Map<Int, Double> {
         // remove EXP vertex
-        kb.graph.removeVertex(EXP.toString())
-        kb.exportDOT("./tick-${time}-Trust", Format.PNG)
+        kb.graph.removeVertex(EXP)
+        kb.exportDOT("./tick-$time-Trust", Format.PNG)
 
         return mapOf()
     }
