@@ -1,16 +1,10 @@
-# Created by .ignore support plugin (hsz.mobi)
 *.iml
-
-## Directory-based project format:
 .idea/
-
 /out/
 /target/
 
-
-*.png
-*.svg
-*.graphml
-*.class
-*.json
-*.csv
+/*.png
+/*.svg
+/*.graphml
+/*.json
+/*.csv

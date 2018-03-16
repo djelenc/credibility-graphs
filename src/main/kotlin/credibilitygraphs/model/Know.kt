@@ -3,20 +3,18 @@ package credibilitygraphs.model
 import atb.interfaces.*
 import credibilitygraphs.core.CredibilityGraph
 import credibilitygraphs.core.CredibilityObject
+import guru.nidi.graphviz.engine.Format
 
-const val EXP = 1337
+const val EXP = -1
 
 class Know : TrustModel<Double> {
     // cumulative interaction outcomes
-    private lateinit var exSum: DoubleArray
-
+    private var exSum = DoubleArray(0)
     // interaction count
-    private lateinit var exCnt: IntArray
+    private var exCnt = IntArray(0)
 
-    override fun initialize(vararg params: Any) {
-        exSum = DoubleArray(0)
-        exCnt = IntArray(0)
-    }
+    // current time
+    private var time = 0
 
     private val experiences = LinkedHashMap<Int, Double>()
 
@@ -50,6 +48,11 @@ class Know : TrustModel<Double> {
 
         kb = experienceKB
 
+        // debugging
+        val experiencePrint = kb.copy()
+        experiencePrint.graph.removeVertex(EXP.toString())
+        experiencePrint.exportDOT("./tick-${time}-Experiences", Format.PNG)
+
         for (agent in agents) {
             // experiences are more a reliable source than this agent
             kb.expansion(CredibilityObject(agent.toString(), EXP.toString(), EXP.toString()))
@@ -70,7 +73,14 @@ class Know : TrustModel<Double> {
 
                         Pair(current, knowledgeBase)
                     })
+
+            // only for debugging
+            val opinionPrint = opinionKB.copy()
+            opinionPrint.graph.removeVertex(EXP.toString())
+            opinionPrint.exportDOT("./tick-${time}-Opinions-$agent", Format.PNG)
+
             // merge current KB with the KB from this agent
+            // TODO: This operation might depend on the order in which the agents' KBs are processed
             kb.merge(opinionKB)
         }
     }
@@ -80,12 +90,9 @@ class Know : TrustModel<Double> {
     }
 
     override fun getTrust(service: Int): Map<Int, Double> {
-        println("BEFORE: ${kb.graph.edgeSet()}")
-
         // remove EXP vertex
         kb.graph.removeVertex(EXP.toString())
-
-        println("AFTER: ${kb.graph.edgeSet()}")
+        kb.exportDOT("./tick-${time}-Trust", Format.PNG)
 
         return mapOf()
     }
@@ -113,7 +120,11 @@ class Know : TrustModel<Double> {
 
     override fun getParametersPanel(): ParametersPanel? = null
 
-    override fun setCurrentTime(time: Int) = Unit
+    override fun setCurrentTime(current: Int) {
+        time = current
+    }
+
+    override fun initialize(vararg params: Any) = Unit
 
     override fun setServices(services: List<Int>) = Unit
 

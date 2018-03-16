@@ -94,7 +94,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
         }
 
         val mutableGraph = Parser.read(ByteArrayInputStream(stream.toByteArray()))
-        mutableGraph.generalAttrs().add(RankDir.BOTTOM_TO_TOP)
+        mutableGraph.generalAttrs().add(RankDir.LEFT_TO_RIGHT)
         Graphviz.fromGraph(mutableGraph)
                 .render(format)
                 .toFile(File(fileName + "." + format.name.toLowerCase()))
