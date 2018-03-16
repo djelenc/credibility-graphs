@@ -13,15 +13,15 @@ class Know : TrustModel<Double> {
     // interaction count
     private lateinit var exCnt: IntArray
 
-    // computed reputation
-    private lateinit var rep: DoubleArray
-
     override fun initialize(vararg params: Any) {
         exSum = DoubleArray(0)
         exCnt = IntArray(0)
     }
 
     private val experiences = LinkedHashMap<Int, Double>()
+
+    private var opinions = emptyList<Opinion>()
+
     private var kb = CredibilityGraph()
 
     override fun processExperiences(new: List<Experience>) {
@@ -30,81 +30,64 @@ class Know : TrustModel<Double> {
             exCnt[e.agent] += 1
             experiences[e.agent] = exSum[e.agent] / exCnt[e.agent]
         }
+    }
 
-        // 1) sort agents by experiences
+    override fun calculateTrust() {
+        // 1) sort agents by average experience outcomes
         val sortedExperiences = experiences.asSequence()
                 .map { it.key to it.value }
                 .sortedBy { (_, value) -> value }
 
         // 2) create a KB from experiences
-        val (mostCredible, experienceKB) = sortedExperiences.fold(Pair(-1, CredibilityGraph()), { acc, pair ->
-            val (prev, currentGraph) = acc
-            val (current, _) = pair
-
+        val (_, experienceKB) = sortedExperiences.fold(
+                Pair(-1, CredibilityGraph()), { (prev, currentGraph), (current, _) ->
             if (prev != -1) {
                 val co = CredibilityObject(prev.toString(), current.toString(), EXP.toString())
                 currentGraph.expansion(co)
             }
-
             Pair(current, currentGraph)
         })
 
-        experienceKB.expansion(CredibilityObject(mostCredible.toString(), EXP.toString(), EXP.toString()))
         kb = experienceKB
-    }
-
-    override fun calculateTrust() {
-
-    }
-
-    override fun processOpinions(opinions: List<Opinion>) {
-        println("EXP ONLY: ${kb.graph.edgeSet()}")
 
         for (agent in agents) {
-            // all opinions where given agent is the source,
-            // sorted from the least to the most trustworthy target
-            val fromAgent = opinions.asSequence()
+            // experiences are more a reliable source than this agent
+            kb.expansion(CredibilityObject(agent.toString(), EXP.toString(), EXP.toString()))
+
+            // all opinions from given agent, sorted by internal trust degrees
+            val relevant = opinions.asSequence()
                     .filter { it.agent1 == agent && it.agent1 != it.agent2 }
-                    .map { it.agent2 to it.internalTrustDegree }
-                    .sortedBy { (_, value) -> value }
+                    .sortedBy { it.internalTrustDegree }
 
-            // convert the list of opinions to an actual credibility base
-            val (_, opinionKB) = fromAgent.fold(Pair(-1, CredibilityGraph()), { acc, pair ->
-                val (prev, currentGraph) = acc
-                val (current, _) = pair
+            // create a KB from the list of opinions
+            val first = relevant.first()
+            val (_, opinionKB) = relevant.drop(1).fold(Pair(first, CredibilityGraph()),
+                    { (previous, knowledgeBase), current ->
+                        val co = CredibilityObject(previous.agent2.toString(),
+                                current.agent2.toString(),
+                                agent.toString())
+                        knowledgeBase.expansion(co)
 
-                if (prev != -1) {
-                    val co = CredibilityObject(prev.toString(), current.toString(), agent.toString())
-                    currentGraph.expansion(co)
-                }
-
-                Pair(current, currentGraph)
-            })
-
+                        Pair(current, knowledgeBase)
+                    })
+            // merge current KB with the KB from this agent
             kb.merge(opinionKB)
         }
+    }
 
-        println("MERGED: ${kb.graph.edgeSet()}")
-
-        // println("OPS: ${opinionKB.graph.edgeSet()}")
-        // kb.merge(opinionKB)
-        //println(opinions.filter { it.agent1 == agent && it.agent1 != it.agent2 }.map { it.agent2 to it.internalTrustDegree })
-        //println(kbFromAgent.graph)
+    override fun processOpinions(new: List<Opinion>) {
+        opinions = new
     }
 
     override fun getTrust(service: Int): Map<Int, Double> {
-        val trust = LinkedHashMap<Int, Double>()
+        println("BEFORE: ${kb.graph.edgeSet()}")
 
-        for (agent in exCnt.indices) {
-            val expWeight = Math.min(exCnt[agent], 3) / 3.0
+        // remove EXP vertex
+        kb.graph.removeVertex(EXP.toString())
 
-            // aggregate data
-            if (expWeight > 0) {
-                trust[agent] = exSum[agent] / exCnt[agent]
-            }
-        }
+        println("AFTER: ${kb.graph.edgeSet()}")
 
-        return trust
+        return mapOf()
     }
 
     private var agents: List<Int> = emptyList()
