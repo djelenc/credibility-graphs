@@ -43,7 +43,7 @@ enum class Extreme {
 /**
  * Represents a knowledge-base of credibility objects
  */
-class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
+class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     // finder finds paths between graph nodes
     private val finder = AllDirectedPaths(graph)
 
@@ -127,7 +127,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     /**
      * Returns true iff [source] < [target] in the transitive closure; false otherwise
      */
-    internal fun isLess(source: String, target: String, graph: CredibilityGraph = this): Boolean {
+    internal fun isLess(source: String, target: String, graph: KnowledgeBase = this): Boolean {
         val algorithm = if (graph == this) this.finder else AllDirectedPaths(graph.graph)
         return graph.graph.containsVertex(source) &&
                 graph.graph.containsVertex(target) &&
@@ -171,7 +171,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      * @return Set of credibility objects that have extreme reliability
      */
     internal fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
-                             graph: CredibilityGraph = this): Set<CredibilityObject> =
+                             graph: KnowledgeBase = this): Set<CredibilityObject> =
             objects.fold(setOf(), { acc, credibilityObject -> extreme(acc, credibilityObject, extreme, graph) })
 
 
@@ -187,7 +187,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      *  comparable elements.
      */
     internal fun extreme(set: Set<CredibilityObject>, credibilityObject: CredibilityObject,
-                         extreme: Extreme, graph: CredibilityGraph): Set<CredibilityObject> {
+                         extreme: Extreme, graph: KnowledgeBase): Set<CredibilityObject> {
         data class ComparisonToCredibilityObject(val obj: CredibilityObject, val isLess: Boolean, val isMore: Boolean)
 
         val existing = set.map {
@@ -271,7 +271,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
      *
      * @param input
      */
-    fun merge(input: CredibilityGraph) {
+    fun merge(input: KnowledgeBase) {
         // make a backup for resolving cycles later
         val old = copy()
 
@@ -290,11 +290,11 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Creates a copy of this CredibilityGraph
+     * Creates a copy of this KnowledgeBase
      *
      * @return
      */
-    fun copy(): CredibilityGraph {
+    fun copy(): KnowledgeBase {
         val newGraph = DirectedMultigraph<String, CredibilityObject>(CredibilityObject::class.java)
 
         graph.edgeSet().forEach { edge ->
@@ -304,7 +304,7 @@ class CredibilityGraph(val graph: Graph<String, CredibilityObject>) {
                     CredibilityObject(edge.source, edge.target, edge.reporter))
         }
 
-        return CredibilityGraph(newGraph)
+        return KnowledgeBase(newGraph)
     }
 
     /**

@@ -1,13 +1,12 @@
 package credibilitygraphs.model
 
 import atb.interfaces.*
-import credibilitygraphs.core.CredibilityGraph
 import credibilitygraphs.core.CredibilityObject
-import guru.nidi.graphviz.engine.Format
+import credibilitygraphs.core.KnowledgeBase
 
 const val EXP = "exp"
 
-class Know : TrustModel<Double> {
+class CredibilityOrdersTM : TrustModel<PartialOrder> {
     // cumulative interaction outcomes
     private var exSum = DoubleArray(0)
     // interaction count
@@ -20,7 +19,7 @@ class Know : TrustModel<Double> {
 
     private var opinions = emptyList<Opinion>()
 
-    private var kb = CredibilityGraph()
+    private var kb = KnowledgeBase()
 
     override fun processExperiences(new: List<Experience>) {
         for (e in new) {
@@ -37,22 +36,24 @@ class Know : TrustModel<Double> {
                 .sortedBy { (_, value) -> value }
 
         // 2) create a KB from experiences
-        val (_, experienceKB) = sortedExperiences.fold(
-                Pair(-1, CredibilityGraph()), { (prev, currentGraph), (current, _) ->
-            if (prev != -1) {
-                val co = CredibilityObject(prev.toString(), current.toString(), EXP)
-                currentGraph.expansion(co)
-            }
-            Pair(current, currentGraph)
-        })
+        val worstExperience = sortedExperiences.first()
+        val (_, experienceKB) = sortedExperiences.drop(1).fold(Pair(worstExperience.first, KnowledgeBase()),
+                { (prev, currentGraph), (current, _) ->
+                    val co = CredibilityObject(prev.toString(), current.toString(), EXP)
+                    currentGraph.expansion(co)
+
+                    Pair(current, currentGraph)
+                })
 
         kb = experienceKB
 
         // debugging
-        val experiencePrint = kb.copy()
+        /* val experiencePrint = kb.copy()
         experiencePrint.graph.removeVertex(EXP)
-        experiencePrint.exportDOT("./tick-${time}-Experiences", Format.PNG)
+        experiencePrint.exportDOT("./tick-${time}-Experiences", Format.PNG) */
 
+        // 3) Merge own (experience-based) KB with KBs obtain from other agents
+        // TODO: This operation depends on the order in which the KBs are merged
         for (agent in agents) {
             // experiences are more a reliable source than this agent
             kb.expansion(CredibilityObject(agent.toString(), EXP, EXP))
@@ -63,8 +64,8 @@ class Know : TrustModel<Double> {
                     .sortedBy { it.internalTrustDegree }
 
             // create a KB from the list of opinions
-            val first = relevant.first()
-            val (_, opinionKB) = relevant.drop(1).fold(Pair(first, CredibilityGraph()),
+            val worstOpinion = relevant.first()
+            val (_, opinionKB) = relevant.drop(1).fold(Pair(worstOpinion, KnowledgeBase()),
                     { (previous, knowledgeBase), current ->
                         val co = CredibilityObject(previous.agent2.toString(),
                                 current.agent2.toString(),
@@ -75,12 +76,11 @@ class Know : TrustModel<Double> {
                     })
 
             // only for debugging
-            val opinionPrint = opinionKB.copy()
+            /*val opinionPrint = opinionKB.copy()
             opinionPrint.graph.removeVertex(EXP)
-            opinionPrint.exportDOT("./tick-${time}-Opinions-$agent", Format.PNG)
+            opinionPrint.exportDOT("./tick-${time}-Opinions-$agent", Format.PNG)*/
 
             // merge current KB with the KB from this agent
-            // TODO: This operation might depend on the order in which the agents' KBs are processed
             kb.merge(opinionKB)
         }
     }
@@ -89,12 +89,14 @@ class Know : TrustModel<Double> {
         opinions = new
     }
 
-    override fun getTrust(service: Int): Map<Int, Double> {
+    override fun getTrust(service: Int): Map<Int, PartialOrder> {
         // remove EXP vertex
         kb.graph.removeVertex(EXP)
-        kb.exportDOT("./tick-$time-Trust", Format.PNG)
+        // kb.exportDOT("./tick-$time-Trust", Format.PNG)
 
-        return mapOf()
+        return kb.graph.vertexSet().asSequence()
+                .map { it.toInt() to PartialOrder(it, kb) }
+                .toMap()
     }
 
     private var agents: List<Int> = emptyList()
@@ -116,7 +118,7 @@ class Know : TrustModel<Double> {
         }
     }
 
-    override fun toString(): String = "Kotlin Trust Model"
+    override fun toString(): String = "Credibility Orders"
 
     override fun getParametersPanel(): ParametersPanel? = null
 
@@ -124,9 +126,17 @@ class Know : TrustModel<Double> {
         time = current
     }
 
-    override fun initialize(vararg params: Any) = Unit
+    override fun initialize(vararg params: Any) {}
 
-    override fun setServices(services: List<Int>) = Unit
+    override fun setServices(services: List<Int>) {}
 
-    override fun setRandomGenerator(generator: RandomGenerator) = Unit
+    override fun setRandomGenerator(generator: RandomGenerator) {}
+}
+
+class PartialOrder(private val agent: String, private val kb: KnowledgeBase) : Comparable<PartialOrder> {
+    override fun compareTo(other: PartialOrder): Int = when {
+        kb.isLess(this.agent, other.agent) -> -1 // this < other
+        kb.isLess(other.agent, this.agent) -> 1 // this > other
+        else -> 0 // equal or incomparable
+    }
 }

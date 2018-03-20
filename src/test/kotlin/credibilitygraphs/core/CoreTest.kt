@@ -1,5 +1,7 @@
 package credibilitygraphs.core
 
+import credibilitygraphs.App
+import credibilitygraphs.model.PartialOrder
 import org.jgrapht.GraphPath
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import org.jgrapht.graph.GraphWalk
@@ -18,11 +20,11 @@ class CoreTest {
     private val example13 = "(H,I,F),(H,L,D),(H,J,G),(I,L,G),(J,L,E),(J,L,F),(J,K,D)," +
             "(J,K,E),(K,L,D),(D,E,G),(D,F,E),(E,G,F),(F,G,D)"
 
-    private var graph: CredibilityGraph? = null
+    private var graph: KnowledgeBase? = null
 
     @Before
     fun setUp() {
-        graph = CredibilityGraph(example2)
+        graph = KnowledgeBase(example2)
     }
 
     @Test
@@ -59,7 +61,7 @@ class CoreTest {
     @Test
     fun minimalSourcesIncomparable() {
         val input = "(4,5,A),(1,5,A),(2,5,A),(3,5,A),(4,5,A),(A,B,1),(A,C,5),(B,D,4),(C,D,3)"
-        val graph = CredibilityGraph(input)
+        val graph = KnowledgeBase(input)
 
         val expected = HashSet<CredibilityObject>()
         Collections.addAll(expected,
@@ -163,7 +165,7 @@ class CoreTest {
 
     @Test
     fun nonPrioritizedRevisionMoreCredibleObjectMultipleReliabilities() {
-        val graph = CredibilityGraph(example13)
+        val graph = KnowledgeBase(example13)
         assertTrue(graph.nonPrioritizedRevision(CredibilityObject("L", "H", "G")))
 
         val expected = HashSet<CredibilityObject>()
@@ -182,7 +184,7 @@ class CoreTest {
 
     @Test
     fun copy() {
-        val graph1 = CredibilityGraph(example2)
+        val graph1 = KnowledgeBase(example2)
         val graph2 = graph1.copy()
 
         val edges1 = graph1.graph.edgeSet()
@@ -200,7 +202,7 @@ class CoreTest {
 
     @Test
     fun buildPathSimple() {
-        val graph = CredibilityGraph("(A, B, X), (B, C, Y)")
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y)")
 
         val vertexes = Arrays.asList("A", "B", "C")
 
@@ -211,7 +213,7 @@ class CoreTest {
 
     @Test
     fun buildPathComplex() {
-        val graph = CredibilityGraph("(A, B, X), (A, B, Y), (B, C, Z), (B, C, X), (B, C, Y)")
+        val graph = KnowledgeBase("(A, B, X), (A, B, Y), (B, C, Z), (B, C, X), (B, C, Y)")
         val vertexes = Arrays.asList("A", "B", "C")
 
         val finder = AllDirectedPaths(graph.graph)
@@ -225,7 +227,7 @@ class CoreTest {
 
     @Test
     fun buildPathCycleSimple() {
-        val graph = CredibilityGraph("(A, B, X), (B, A, Y)")
+        val graph = KnowledgeBase("(A, B, X), (B, A, Y)")
         val vertexes = Arrays.asList("A", "B", "A")
 
         val finder = AllDirectedPaths(graph.graph)
@@ -241,7 +243,7 @@ class CoreTest {
 
     @Test
     fun buildPathCycleComplex() {
-        val graph = CredibilityGraph("(A, B, X), (A, B, Y), (B, C, X), (B, C, Y), (C, A, Z)")
+        val graph = KnowledgeBase("(A, B, X), (A, B, Y), (B, C, X), (B, C, Y), (C, A, Z)")
         val vertexes = Arrays.asList("A", "B", "C", "A")
 
         val finder = AllDirectedPaths(graph.graph)
@@ -257,7 +259,7 @@ class CoreTest {
 
     @Test
     fun findMinimumCycles() {
-        val graph = CredibilityGraph("(A, B, X), (A, B, Y), (B, C, Z), (B, C, W), (C, A, W)")
+        val graph = KnowledgeBase("(A, B, X), (A, B, Y), (B, C, Z), (B, C, W), (C, A, W)")
 
         val actual = graph.findCycles()
         assertEquals(4, actual.size.toLong())
@@ -309,7 +311,7 @@ class CoreTest {
 
     @Test
     fun maxCurrentEmpty() {
-        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z)")
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z)")
         val current = setOf<CredibilityObject>()
         val co = CredibilityObject("A", "B", "X")
 
@@ -321,7 +323,7 @@ class CoreTest {
 
     @Test
     fun maxCurrentSmaller() {
-        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z)")
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z)")
         val current = setOf(CredibilityObject("1", "4", "C"))
         val co = CredibilityObject("2", "3", "D")
 
@@ -333,7 +335,7 @@ class CoreTest {
 
     @Test
     fun maxCurrentBigger() {
-        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z)")
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z)")
         val current = setOf(CredibilityObject("1", "4", "D"))
         val co = CredibilityObject("2", "3", "C")
 
@@ -344,7 +346,7 @@ class CoreTest {
 
     @Test
     fun maxCurrentIncomparable() {
-        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W)")
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W)")
         val current = setOf(CredibilityObject("1", "4", "D"))
         // D and E are incomparable
         val co = CredibilityObject("2", "3", "E")
@@ -357,7 +359,7 @@ class CoreTest {
 
     @Test
     fun maxCurrentIncomparableToSomeBiggerThanOthers() {
-        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W), (E, F, U)")
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W), (E, F, U)")
         val current = setOf(
                 CredibilityObject("1", "4", "D"),
                 CredibilityObject("4", "47", "E")
@@ -373,7 +375,7 @@ class CoreTest {
 
     @Test
     fun maxCurrentIncomparableToSomeSmallerThanSome() {
-        val graph = CredibilityGraph("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W), (E, F, U)")
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W), (E, F, U)")
         val current = setOf(
                 CredibilityObject("1", "4", "D"),
                 CredibilityObject("4", "47", "F")
@@ -388,7 +390,7 @@ class CoreTest {
 
     @Test
     fun maxCurrentIncomparableToSomeBiggerThanSome() {
-        val graph = CredibilityGraph("(A, D, Y), (B, D, Y), (E, A, Y), (E, B, Y), (E, C, Y)")
+        val graph = KnowledgeBase("(A, D, Y), (B, D, Y), (E, A, Y), (E, B, Y), (E, C, Y)")
         val current = setOf(
                 CredibilityObject("1", "4", "A"),
                 CredibilityObject("4", "7", "B"),
@@ -404,7 +406,7 @@ class CoreTest {
 
     @Test
     fun getExtremeFromCollection() {
-        val graph = CredibilityGraph("(A, D, Y), (B, D, Y), (E, A, Y), (E, B, Y), (E, C, Y)")
+        val graph = KnowledgeBase("(A, D, Y), (B, D, Y), (E, A, Y), (E, B, Y), (E, C, Y)")
 
         val collection = setOf(
                 CredibilityObject("1", "2", "A"),
@@ -425,5 +427,42 @@ class CoreTest {
         val actualMin = graph.getExtremes(collection, Extreme.MIN)
 
         assertEquals(expectedMin, actualMin)
+    }
+
+    @Test
+    fun partialOrders() {
+        val kb = KnowledgeBase(App.EXAMPLE2)
+
+        val orders = kb.graph.vertexSet().map { it to PartialOrder(it, kb) }.toMap()
+
+        assert(orders["B"]!! < orders["F1"]!!)
+        assert(orders["B"]!! < orders["F2"]!!)
+        assert(orders["B"]!! < orders["F3"]!!)
+        assert(orders["F1"]!! < orders["F2"]!!)
+        assert(orders["F1"]!! < orders["F3"]!!)
+        assert(orders["F1"]!! > orders["B"]!!)
+        assert(orders["F2"]!! > orders["B"]!!)
+        assert(orders["F3"]!! > orders["B"]!!)
+        assert(orders["F2"]!! > orders["F1"]!!)
+        assert(orders["F3"]!! > orders["F1"]!!)
+
+        for (node1 in listOf("A1", "A2", "A3", "A4")) {
+            for (node2 in listOf("B", "F1", "F2", "F3")) {
+                assert(orders[node1]!!.compareTo(orders[node2]!!) == 0)
+                assert(orders[node2]!!.compareTo(orders[node1]!!) == 0)
+            }
+        }
+
+        assert(orders["A1"]!! < orders["A2"]!!)
+        assert(orders["A1"]!! < orders["A3"]!!)
+        assert(orders["A1"]!! < orders["A4"]!!)
+        assert(orders["A2"]!! < orders["A4"]!!)
+        assert(orders["A3"]!! < orders["A4"]!!)
+        assert(orders["A3"]!!.compareTo(orders["A2"]!!) == 0)
+        assert(orders["A2"]!! > orders["A1"]!!)
+        assert(orders["A3"]!! > orders["A1"]!!)
+        assert(orders["A4"]!! > orders["A1"]!!)
+        assert(orders["A4"]!! > orders["A2"]!!)
+        assert(orders["A4"]!! > orders["A3"]!!)
     }
 }
