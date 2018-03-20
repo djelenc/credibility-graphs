@@ -24,7 +24,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import java.util.*
 
 /**
  * Represents a credibility object with [source], [target] and a [reporter].
@@ -44,8 +43,11 @@ enum class Extreme {
  * Represents a knowledge-base of credibility objects
  */
 class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
-    // finder finds paths between graph nodes
-    private val finder = AllDirectedPaths(graph)
+    // finds paths between graph nodes
+    private val pathFinder = AllDirectedPaths(graph)
+
+    // finds cycles in a graph
+    private val cycleFinder = HawickJamesSimpleCycles(graph)
 
     constructor(credibilityObjects: String = "") : this(parseObjects(credibilityObjects))
 
@@ -128,11 +130,10 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * Returns true iff [source] < [target] in the transitive closure; false otherwise
      */
     internal fun isLess(source: String, target: String, graph: KnowledgeBase = this): Boolean {
-        val algorithm = if (graph == this) this.finder else AllDirectedPaths(graph.graph)
+        val algorithm = if (graph == this) this.pathFinder else AllDirectedPaths(graph.graph)
         return graph.graph.containsVertex(source) &&
                 graph.graph.containsVertex(target) &&
                 algorithm.getAllPaths(source, target, true, null).isNotEmpty()
-
     }
 
     /**
@@ -140,11 +141,11 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * @return A list of paths
      */
     internal fun getAllPaths(source: String, target: String): List<GraphPath<String, CredibilityObject>> =
-            finder.getAllPaths(source, target, false, graph.edgeSet().size)
+            pathFinder.getAllPaths(source, target, false, graph.edgeSet().size)
 
     /**
-     * Expands the knowledge-base by adding given [credibilityObject]. The expansion fails the [credibilityObject]
-     * contradicts current knowledge-base.
+     * Expands the knowledge-base by adding given [credibilityObject]. The expansion fails if
+     * the [credibilityObject] contradicts current knowledge-base.
      * @return true on success, false otherwise
      */
     fun expansion(credibilityObject: CredibilityObject): Boolean = when {
@@ -157,8 +158,8 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Find extremes ([Extreme.MIN] or [Extreme.MAX]) (w.r.t the credibility of reporters) on all paths between
-     * [source] and [target].
+     * Find extremes ([Extreme.MIN] or [Extreme.MAX]) (w.r.t the credibility of reporters) on all
+     * paths between [source] and [target].
      * @return set of extremes
      */
     internal fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
@@ -167,7 +168,9 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
                     .toSet() // convert to set
 
     /**
-     * Get extreme credibility objects (w.r.t. reliability of reporters) from a collection of credibility [objects].
+     * Get extreme credibility objects (w.r.t. reliability of reporters) from a collection of
+     * credibility [objects].
+     *
      * @return Set of credibility objects that have extreme reliability
      */
     internal fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
@@ -252,7 +255,8 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * Revises the knowledge-base by adding given [credibilityObject]. The revision succeeds iff
      * the new [credibilityObject]:
      *  * does not contradict current knowledge-base, or
-     *  * it does contradict the current knowledge-base but the reliability of the [credibilityObject] is higher.
+     *  * it contradicts the current knowledge-base but the reliability of the new
+     * [credibilityObject] is higher than the existing ones that contradict it.
      * @return true on success, false otherwise
      */
     fun nonPrioritizedRevision(credibilityObject: CredibilityObject): Boolean {
@@ -276,59 +280,80 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
         val old = copy()
 
         // copy all vertices and edges from input into this graph
-        input.graph.edgeSet().forEach { edge ->
-            this.graph.addVertex(edge.source)
-            this.graph.addVertex(edge.target)
-            this.graph.addEdge(edge.source, edge.target, edge)
+        input.graph.edgeSet().forEach {
+            graph.addVertex(it.source)
+            graph.addVertex(it.target)
+            graph.addEdge(it.source, it.target, it)
         }
 
         // in every cycle, remove the least reliable edge
-        findCycles().forEach { cycle ->
-            val leastReliable = getExtremes(cycle.edgeList, Extreme.MIN, old)
+        findCycles().forEach {
+            val leastReliable = getExtremes(it.edgeList, Extreme.MIN, old)
             graph.removeAllEdges(leastReliable)
         }
     }
 
-    /**
-     * Creates a copy of this KnowledgeBase
-     *
-     * @return
-     */
-    fun copy(): KnowledgeBase {
+    /** Creates a copy of this KnowledgeBase */
+    internal fun copy(): KnowledgeBase {
         val newGraph = DirectedMultigraph<String, CredibilityObject>(CredibilityObject::class.java)
 
-        graph.edgeSet().forEach { edge ->
-            newGraph.addVertex(edge.source)
-            newGraph.addVertex(edge.target)
-            newGraph.addEdge(edge.source, edge.target,
-                    CredibilityObject(edge.source, edge.target, edge.reporter))
+        graph.edgeSet().forEach {
+            newGraph.addVertex(it.source)
+            newGraph.addVertex(it.target)
+            newGraph.addEdge(it.source, it.target,
+                    CredibilityObject(it.source, it.target, it.reporter))
         }
 
         return KnowledgeBase(newGraph)
     }
 
     /**
-     * Finds all minimal cycles in current knowledge-base
-     *
-     * @return
+     * Finds all minimal cycles in current knowledge-base using lazy evaluation
      */
-    internal fun findCycles(): Set<GraphWalk<String, CredibilityObject>> {
-        val algorithm = HawickJamesSimpleCycles(graph)
-        return algorithm.findSimpleCycles()
-                .map { vertexes ->
-                    vertexes.add(vertexes[0]) // connect the cycle
-                    vertexes.reverse() // cycles are found in reverse order
-                    buildPaths(vertexes)
-                }
-                .flatMap { it }
-                .toSet()
+    internal fun findCyclesLazy(): Sequence<GraphWalk<String, CredibilityObject>> = cycleFinder
+            .findSimpleCycles()
+            .asSequence()
+            .map {
+                it.add(it[0]) // connect the cycle
+                it.reverse() // because cycles are found in reverse order
+                buildPathsLazy(it)
+            }.flatten()
+
+    /**
+     * Builds a sequence of GraphWalk instances from a list of vertexes usin lazy evaluation
+     */
+    internal fun buildPathsLazy(vertexes: List<String>): Sequence<GraphWalk<String, CredibilityObject>> {
+        val source = vertexes[0]
+
+        if (vertexes.size == 1) {
+            return sequenceOf(GraphWalk.singletonWalk(graph, source))
+        }
+
+        val target = vertexes[1]
+
+        return graph.getAllEdges(source, target).asSequence().map {
+            val step = GraphWalk<String, CredibilityObject>(graph, source, target, listOf(it), 0.0)
+            val nextPaths = buildPathsLazy(vertexes.subList(1, vertexes.size))
+            nextPaths.map { step.concat(it, { 0.0 }) }
+        }.flatten()
     }
 
     /**
-     * Builds a set of GraphWalks from a list of vertexes representing a cycle
-     *
-     * @param vertexes
-     * @return
+     * Finds all minimal cycles in current knowledge-base
+     */
+    internal fun findCycles(): Set<GraphWalk<String, CredibilityObject>> = HawickJamesSimpleCycles(graph)
+            .findSimpleCycles()
+            .map {
+                it.add(it[0]) // connect the cycle
+                it.reverse() // cycles are found in reverse order
+                buildPaths(it)
+            }
+            .flatten()
+            .toSet()
+
+
+    /**
+     * Builds a sequence of GraphWalk instances from a list of vertexes
      */
     internal fun buildPaths(vertexes: List<String>): Set<GraphWalk<String, CredibilityObject>> {
         val source = vertexes[0]
@@ -337,10 +362,8 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
             return setOf(GraphWalk.singletonWalk(graph, source))
         }
 
-        val allPaths = HashSet<GraphWalk<String, CredibilityObject>>()
-
+        val allPaths = LinkedHashSet<GraphWalk<String, CredibilityObject>>()
         val target = vertexes[1]
-
         val edges = graph.getAllEdges(source, target)
 
         for (edge in edges) {
@@ -348,7 +371,7 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
             val nextPaths = buildPaths(vertexes.subList(1, vertexes.size))
 
             for (path in nextPaths) {
-                val full = step.concat(path) { _ -> 0.0 }
+                val full = step.concat(path) { 0.0 }
                 allPaths.add(full)
             }
         }

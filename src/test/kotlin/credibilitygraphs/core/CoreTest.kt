@@ -1,6 +1,5 @@
 package credibilitygraphs.core
 
-import credibilitygraphs.App
 import credibilitygraphs.model.PartialOrder
 import org.jgrapht.GraphPath
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
@@ -12,6 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
 import kotlin.test.assertTrue
+
 
 class CoreTest {
 
@@ -212,17 +212,53 @@ class CoreTest {
     }
 
     @Test
+    fun buildPathSimpleLazy1() {
+        val graph = KnowledgeBase("(A, B, X), (B, C, Y)")
+
+        val vertexes = Arrays.asList("A", "B", "C")
+
+        val expected = setOf(GraphWalk(graph.graph, vertexes, 0.0))
+        val actual = graph.buildPathsLazy(vertexes).toSet()
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun buildPathSimpleLazy2() {
+        val graph = KnowledgeBase("""(A, B, X), (A, B, Y),
+            |(A, B, Z), (B, C, X), (B, C, Y), (B, C, Z),
+            |(C, D, X)""".trimMargin())
+
+        val vertexes = listOf("A", "B", "C", "D")
+        val sequence = graph.buildPathsLazy(vertexes)
+        assertEquals(9, sequence.count())
+    }
+
+    @Test
     fun buildPathComplex() {
         val graph = KnowledgeBase("(A, B, X), (A, B, Y), (B, C, Z), (B, C, X), (B, C, Y)")
         val vertexes = Arrays.asList("A", "B", "C")
 
         val finder = AllDirectedPaths(graph.graph)
 
-        val expected = HashSet(finder.getAllPaths(
+        val expected: Set<GraphPath<String, CredibilityObject>> = HashSet(finder.getAllPaths(
                 "A", "C", false, graph.graph.vertexSet().size))
 
         val actual = graph.buildPaths(vertexes)
-        assertEquals(expected as Set<GraphPath<String, CredibilityObject>>, actual)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun buildPathComplexLazy() {
+        val graph = KnowledgeBase("(A, B, X), (A, B, Y), (B, C, Z), (B, C, X), (B, C, Y)")
+        val vertexes = Arrays.asList("A", "B", "C")
+
+        val finder = AllDirectedPaths(graph.graph)
+
+        val expected: Set<GraphPath<String, CredibilityObject>> = HashSet(finder.getAllPaths(
+                "A", "C", false, graph.graph.vertexSet().size))
+
+        val actual = graph.buildPathsLazy(vertexes).toSet()
+        assertEquals(expected, actual)
     }
 
     @Test
@@ -234,10 +270,26 @@ class CoreTest {
 
         val expected = finder.getAllPaths(
                 "A", "A", false, graph.graph.vertexSet().size)
-                .filter { e -> e.length > 0 } // drop paths with length 1
+                .filter { it.length > 0 } // drop paths with length 0
                 .toSet()
 
         val actual = graph.buildPaths(vertexes)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun buildPathCycleSimpleLazy() {
+        val graph = KnowledgeBase("(A, B, X), (B, A, Y)")
+        val vertexes = Arrays.asList("A", "B", "A")
+
+        val finder = AllDirectedPaths(graph.graph)
+
+        val expected = finder.getAllPaths(
+                "A", "A", false, graph.graph.vertexSet().size)
+                .filter { it.length > 0 } // drop paths with length 0
+                .toSet()
+
+        val actual = graph.buildPathsLazy(vertexes).toSet()
         assertEquals(expected, actual)
     }
 
@@ -250,10 +302,26 @@ class CoreTest {
 
         val expected = finder.getAllPaths(
                 "A", "A", false, graph.graph.vertexSet().size)
-                .filter { e -> e.length > 0 } // drop paths with length 1
+                .filter { it.length > 0 } // drop paths with length 0
                 .toSet()
 
-        val actual = HashSet(graph.buildPaths(vertexes))
+        val actual = graph.buildPaths(vertexes)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun buildPathCycleComplexLazy() {
+        val graph = KnowledgeBase("(A, B, X), (A, B, Y), (B, C, X), (B, C, Y), (C, A, Z)")
+        val vertexes = Arrays.asList("A", "B", "C", "A")
+
+        val finder = AllDirectedPaths(graph.graph)
+
+        val expected = finder.getAllPaths(
+                "A", "A", false, graph.graph.vertexSet().size)
+                .filter { it.length > 0 } // drop paths with length 0
+                .toSet()
+
+        val actual = graph.buildPathsLazy(vertexes).toSet()
         assertEquals(expected, actual)
     }
 
@@ -268,7 +336,25 @@ class CoreTest {
 
         val expected = finder.getAllPaths(
                 "C", "C", false, graph.graph.vertexSet().size)
-                .filter { e -> e.length > 0 } // drop paths with length 1
+                .filter { it.length > 0 } // drop paths with length 0
+                .toSet()
+
+        assertEquals(expected, actual)
+    }
+
+
+    @Test
+    fun findMinimumCyclesLazy() {
+        val graph = KnowledgeBase("(A, B, X), (A, B, Y), (B, C, Z), (B, C, W), (C, A, W)")
+
+        val actual = graph.findCyclesLazy().toSet()
+        assertEquals(4, actual.size.toLong())
+
+        val finder = AllDirectedPaths(graph.graph)
+
+        val expected = finder.getAllPaths(
+                "C", "C", false, graph.graph.vertexSet().size)
+                .filter { it.length > 0 } // drop paths with length 0
                 .toSet()
 
         assertEquals(expected, actual)
@@ -431,7 +517,7 @@ class CoreTest {
 
     @Test
     fun partialOrders() {
-        val kb = KnowledgeBase(App.EXAMPLE2)
+        val kb = KnowledgeBase(example2)
 
         val orders = kb.graph.vertexSet().map { it to PartialOrder(it, kb) }.toMap()
 

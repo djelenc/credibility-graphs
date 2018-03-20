@@ -1,80 +1,60 @@
 package credibilitygraphs
 
-import credibilitygraphs.core.KnowledgeBase
 import credibilitygraphs.core.CredibilityObject
+import credibilitygraphs.core.KnowledgeBase
 import guru.nidi.graphviz.engine.Format
 
 object App {
 
-    const val EXAMPLE2 = "(B,F1,F2),(F1,F2,F3),(F2,F3,B),(A1,A2,F1),(A1,A3,F1),(A2,A4,B),(A2,A4,F3),(A3,A4,F2)"
-    const val EXAMPLE5 = "(D,F,J),(D,H,L),(F,G,M),(H,G,M),(G,E,K),(J,K,E),(K,L,G),(L,M,E)"
-    const val EXAMPLE13 = "(H,I,F),(H,L,D),(H,J,G),(I,L,G),(J,L,E),(J,L,F),(J,K,D)," +
+    private const val EXAMPLE2 = "(B,F1,F2),(F1,F2,F3),(F2,F3,B),(A1,A2,F1),(A1,A3,F1),(A2,A4,B)," +
+            "(A2,A4,F3),(A3,A4,F2)"
+    private const val EXAMPLE5 = "(D,F,J),(D,H,L),(F,G,M),(H,G,M),(G,E,K),(J,K,E),(K,L,G),(L,M,E)"
+    private const val EXAMPLE13 = "(H,I,F),(H,L,D),(H,J,G),(I,L,G),(J,L,E),(J,L,F),(J,K,D)," +
             "(J,K,E),(K,L,D),(D,E,G),(D,F,E),(E,G,F),(F,G,D)"
 
-    fun basic() {
-        /*val graph = KnowledgeBase(EXAMPLE2)
-        graph.exportDOT("./fig-1", Format.PNG)
+    fun paper() {
+        val kb1 = KnowledgeBase(EXAMPLE2)
+        kb1.exportDOT("./fig-1", Format.PNG)
 
-        graph.expansion(CredibilityObject("C", "F1", "B"))
-        graph.exportDOT("./fig-2-expansion", Format.PNG)
+        val kb2 = KnowledgeBase(EXAMPLE2)
+        kb2.expansion(CredibilityObject("A1", "A3", "F2"))
+        kb2.exportDOT("./fig-2-expansion", Format.PNG)
 
-        graph.contraction("C", "F1")
-        graph.exportDOT("./fig-3-contraction", Format.PNG)
+        val kb3 = KnowledgeBase(EXAMPLE2)
+        kb3.contraction("A1", "A4")
+        kb3.exportDOT("./fig-3-contraction", Format.PNG)
 
-        graph.nonPrioritizedRevision(CredibilityObject("A4", "A1", "B"))
-        graph.exportDOT("./fig-4-npr-revision", Format.PNG)
+        val kb4 = KnowledgeBase(EXAMPLE2)
+        kb4.nonPrioritizedRevision(CredibilityObject("A4", "A1", "B"))
+        kb4.exportDOT("./fig-4-npr-revision", Format.PNG)
 
-        graph.prioritizedRevision(CredibilityObject("A4", "A1", "B"))
-        graph.exportDOT("./fig-5-pr-revision", Format.PNG)*/
+        val kb5 = KnowledgeBase(EXAMPLE2)
+        kb5.prioritizedRevision(CredibilityObject("A4", "A1", "B"))
+        kb5.exportDOT("./fig-5-pr-revision", Format.PNG)
 
-        val graph2 = KnowledgeBase(EXAMPLE13)
-        graph2.exportDOT("./fig-6", Format.PNG)
-        graph2.exportGraphML("./fig-6")
+        val kb6 = KnowledgeBase(EXAMPLE13)
+        kb6.exportDOT("./fig-6", Format.PNG)
+        // kb6.exportGraphML("./fig-6")
 
-        graph2.nonPrioritizedRevision(CredibilityObject("L", "H", "G"))
-        graph2.exportDOT("./fig-7-npr-revision", Format.PNG)
+        val kb7 = KnowledgeBase(EXAMPLE13)
+        kb7.nonPrioritizedRevision(CredibilityObject("L", "H", "G"))
+        kb7.exportDOT("./fig-7-npr-revision", Format.PNG)
     }
 
-    fun informants() {
-        val inf = KnowledgeBase(
-                "(B, D, inf), (A, D, inf)")
-        inf.graph.addVertex("C")
-        inf.graph.addVertex("E")
-        inf.graph.addVertex("F")
-        inf.graph.addVertex("G")
-        inf.exportDOT("./inf", Format.SVG)
-    }
+    fun merge() {
+        val first = KnowledgeBase("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
+        first.exportDOT("./merge-g1", Format.PNG)
 
-    fun opinions() {
-        val op1 = KnowledgeBase(
-                "(A, C, D), (C, B, D)")
-        op1.exportDOT("./ops1", Format.SVG)
+        val second = KnowledgeBase("(A, C, E), (C, D, B)")
+        second.exportDOT("./merge-g2", Format.PNG)
 
-        val op2 = KnowledgeBase(
-                "(E, F, B), (F, G, B), (A, F, B)")
-        op2.exportDOT("./ops2", Format.SVG)
-    }
-
-    fun experiences() {
-        val graph = KnowledgeBase(
-                "(A, B, exp), (B, C, exp)")
-        graph.exportDOT("./exp", Format.SVG)
+        first.merge(second)
+        first.exportDOT("./merge-merged", Format.PNG)
     }
 }
 
 fun main(args: Array<String>) {
-    // App.experiences();
-    // App.opinions();
-    // App.informants();
-
-    /*val graph = KnowledgeBase("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
-    graph.exportDOT("./g1", Format.PNG)
-
-    val newGraph = KnowledgeBase("(A, C, E), (C, D, B)")
-    newGraph.exportDOT("./g2", Format.PNG)
-
-    graph.merge(newGraph)
-    graph.exportDOT("./merged", Format.PNG)*/
-    App.basic()
+    App.paper()
+    // App.merge()
 }
 
