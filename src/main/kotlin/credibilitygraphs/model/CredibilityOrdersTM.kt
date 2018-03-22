@@ -22,11 +22,19 @@ class CredibilityOrdersTM : TrustModel<PartialOrder> {
     private var kb = KnowledgeBase()
 
     override fun processExperiences(new: List<Experience>) {
+        /*val printedExp = new.map { Pair(it.agent, String.format("%.2f", it.outcome)) }
+        println("$time: new = $printedExp")*/
         for (e in new) {
             exSum[e.agent] += e.outcome
             exCnt[e.agent] += 1
             experiences[e.agent] = exSum[e.agent] / exCnt[e.agent]
         }
+        /*val printed = experiences.asSequence()
+                .sortedBy { (_, value) -> value }
+                .map { Pair(it.key, String.format("%.2f", it.value)) }
+                .toList()
+        println("$time: exp = $printed")
+        println()*/
     }
 
     override fun calculateTrust() {
