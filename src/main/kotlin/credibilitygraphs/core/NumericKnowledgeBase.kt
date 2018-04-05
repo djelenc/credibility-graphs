@@ -6,14 +6,10 @@ class NumericKnowledgeBase(input: String) : KnowledgeBase(input) {
 
     internal val pastAccuracy: MutableMap<String, PastAccuracy> = HashMap()
 
-    fun storeCorrect(agent: String) {
+    fun updatePastAccuracy(agent: String, correct: Int, incorrect: Int) {
         val result = pastAccuracy.getOrPut(agent, { PastAccuracy(0, 0) })
-        result.correct += 1
-    }
-
-    fun storeIncorrect(agent: String) {
-        val result = pastAccuracy.getOrPut(agent, { PastAccuracy(0, 0) })
-        result.incorrect += 1
+        result.correct += correct
+        result.incorrect += incorrect
     }
 
     override fun isLessCredible(source: String, target: String, graph: KnowledgeBase): Boolean {

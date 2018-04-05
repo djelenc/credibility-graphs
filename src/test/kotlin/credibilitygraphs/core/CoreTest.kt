@@ -20,7 +20,7 @@ class CoreTest {
     private val example13 = "(H,I,F),(H,L,D),(H,J,G),(I,L,G),(J,L,E),(J,L,F),(J,K,D)," +
             "(J,K,E),(K,L,D),(D,E,G),(D,F,E),(E,G,F),(F,G,D)"
 
-    private var graph: KnowledgeBase? = null
+    private lateinit var graph: KnowledgeBase
 
     @Before
     fun setUp() {
@@ -29,22 +29,22 @@ class CoreTest {
 
     @Test
     fun findPaths() {
-        val paths = graph!!.getAllPaths("A1", "A4")
+        val paths = graph.getAllPaths("A1", "A4")
         assertEquals(3, paths.size.toLong())
     }
 
     @Test
     fun expansionSuccess() {
-        assertTrue(graph!!.expansion(CredibilityObject("A1", "F3", "A2")))
-        assertTrue(graph!!.graph.containsEdge("A1", "F3"))
-        assertEquals("A2", graph!!.graph.getEdge("A1", "F3").reporter)
+        assertTrue(graph.expansion(CredibilityObject("A1", "F3", "A2")))
+        assertTrue(graph.graph.containsEdge("A1", "F3"))
+        assertEquals("A2", graph.graph.getEdge("A1", "F3").reporter)
     }
 
     @Test
     fun expansionFailure() {
-        val before = graph!!.graph.edgeSet()
-        assertFalse(graph!!.expansion(CredibilityObject("A4", "A1", "A2")))
-        assertEquals(before, graph!!.graph.edgeSet())
+        val before = graph.graph.edgeSet()
+        assertFalse(graph.expansion(CredibilityObject("A4", "A1", "A2")))
+        assertEquals(before, graph.graph.edgeSet())
     }
 
     @Test
@@ -55,7 +55,7 @@ class CoreTest {
                 CredibilityObject("A2", "A4", "B"),
                 CredibilityObject("A1", "A3", "F1"))
 
-        assertEquals(expected, graph!!.getExtremes("A1", "A4", Extreme.MIN))
+        assertEquals(expected, graph.getExtremes("A1", "A4", Extreme.MIN))
     }
 
     @Test
@@ -74,41 +74,41 @@ class CoreTest {
 
     @Test
     fun contraction() {
-        val before = graph!!.getAllPaths("A1", "A4")
+        val before = graph.getAllPaths("A1", "A4")
         assertEquals(3, before.size.toLong())
-        assertEquals(8, graph!!.graph.edgeSet().size.toLong())
+        assertEquals(8, graph.graph.edgeSet().size.toLong())
 
-        graph!!.contraction("A1", "A4")
+        graph.contraction("A1", "A4")
 
-        val after = graph!!.getAllPaths("A1", "A4")
+        val after = graph.getAllPaths("A1", "A4")
         assertEquals(0, after.size.toLong())
-        assertEquals(5, graph!!.graph.edgeSet().size.toLong())
+        assertEquals(5, graph.graph.edgeSet().size.toLong())
     }
 
     @Test
     fun prioritizedRevision() {
-        val before = graph!!.getAllPaths("A2", "A1")
+        val before = graph.getAllPaths("A2", "A1")
         assertEquals(0, before.size.toLong())
-        assertEquals(8, graph!!.graph.edgeSet().size.toLong())
+        assertEquals(8, graph.graph.edgeSet().size.toLong())
 
-        assertTrue(graph!!.prioritizedRevision(CredibilityObject("A4", "A1", "F3")))
+        assertTrue(graph.prioritizedRevision(CredibilityObject("A4", "A1", "F3")))
 
-        val after = graph!!.getAllPaths("A2", "A1")
+        val after = graph.getAllPaths("A2", "A1")
         assertEquals(1, after.size.toLong())
-        assertEquals(6, graph!!.graph.edgeSet().size.toLong())
+        assertEquals(6, graph.graph.edgeSet().size.toLong())
     }
 
     @Test
     fun prioritizedRevisionNoRemoval() {
-        val before = graph!!.getAllPaths("A1", "A4")
+        val before = graph.getAllPaths("A1", "A4")
         assertEquals(3, before.size.toLong())
-        assertEquals(8, graph!!.graph.edgeSet().size.toLong())
+        assertEquals(8, graph.graph.edgeSet().size.toLong())
 
-        assertTrue(graph!!.prioritizedRevision(CredibilityObject("A1", "A4", "F3")))
+        assertTrue(graph.prioritizedRevision(CredibilityObject("A1", "A4", "F3")))
 
-        val after = graph!!.getAllPaths("A1", "A4")
+        val after = graph.getAllPaths("A1", "A4")
         assertEquals(4, after.size.toLong())
-        assertEquals(9, graph!!.graph.edgeSet().size.toLong())
+        assertEquals(9, graph.graph.edgeSet().size.toLong())
     }
 
     @Test
@@ -119,37 +119,37 @@ class CoreTest {
                 CredibilityObject("A2", "A4", "F3"),
                 CredibilityObject("A3", "A4", "F2"))
 
-        assertEquals(expected, graph!!.getExtremes("A1", "A4", Extreme.MAX))
+        assertEquals(expected, graph.getExtremes("A1", "A4", Extreme.MAX))
     }
 
     @Test
     fun reliability() {
         val expected = HashSet<String>()
         expected.add("F1")
-        assertEquals(expected, graph!!.reliability("A1", "A4"))
+        assertEquals(expected, graph.reliability("A1", "A4"))
     }
 
     @Test
     fun nonPrioritizedRevisionSimpleExpansion() {
-        assertTrue(graph!!.nonPrioritizedRevision(CredibilityObject("A4", "F3", "B")))
+        assertTrue(graph.nonPrioritizedRevision(CredibilityObject("A4", "F3", "B")))
 
-        val after = graph!!.getAllPaths("A4", "F3")
+        val after = graph.getAllPaths("A4", "F3")
         assertEquals(1, after.size.toLong())
-        assertEquals(9, graph!!.graph.edgeSet().size.toLong())
+        assertEquals(9, graph.graph.edgeSet().size.toLong())
     }
 
     @Test
     fun nonPrioritizedRevisionRejection() {
-        val pathsBefore = graph!!.getAllPaths("A4", "A1")
+        val pathsBefore = graph.getAllPaths("A4", "A1")
 
-        assertFalse(graph!!.nonPrioritizedRevision(CredibilityObject("A4", "A1", "B")))
+        assertFalse(graph.nonPrioritizedRevision(CredibilityObject("A4", "A1", "B")))
 
-        assertEquals(pathsBefore, graph!!.getAllPaths("A4", "A1"))
+        assertEquals(pathsBefore, graph.getAllPaths("A4", "A1"))
     }
 
     @Test
     fun nonPrioritizedRevisionMoreCredibleObject() {
-        assertTrue(graph!!.nonPrioritizedRevision(CredibilityObject("A4", "A1", "F3")))
+        assertTrue(graph.nonPrioritizedRevision(CredibilityObject("A4", "A1", "F3")))
 
         val expected = HashSet<CredibilityObject>()
         Collections.addAll(expected,
@@ -160,7 +160,7 @@ class CoreTest {
                 CredibilityObject("F1", "F2", "F3"),
                 CredibilityObject("F2", "F3", "B"))
 
-        assertEquals(expected, graph!!.graph.edgeSet())
+        assertEquals(expected, graph.graph.edgeSet())
     }
 
     @Test
@@ -362,35 +362,35 @@ class CoreTest {
 
     @Test
     fun isLess() {
-        assertTrue(graph!!.isLess("A1", "A2"))
-        assertTrue(graph!!.isLess("A1", "A4"))
-        assertTrue(graph!!.isLess("A1", "A3"))
-        assertTrue(graph!!.isLess("A3", "A4"))
-        assertTrue(graph!!.isLess("A2", "A4"))
+        assertTrue(graph.isLess("A1", "A2"))
+        assertTrue(graph.isLess("A1", "A4"))
+        assertTrue(graph.isLess("A1", "A3"))
+        assertTrue(graph.isLess("A3", "A4"))
+        assertTrue(graph.isLess("A2", "A4"))
 
-        assertFalse(graph!!.isLess("A2", "A1"))
-        assertFalse(graph!!.isLess("A4", "A1"))
-        assertFalse(graph!!.isLess("A3", "A1"))
-        assertFalse(graph!!.isLess("A4", "A3"))
-        assertFalse(graph!!.isLess("A4", "A2"))
+        assertFalse(graph.isLess("A2", "A1"))
+        assertFalse(graph.isLess("A4", "A1"))
+        assertFalse(graph.isLess("A3", "A1"))
+        assertFalse(graph.isLess("A4", "A3"))
+        assertFalse(graph.isLess("A4", "A2"))
 
-        assertTrue(graph!!.isLess("B", "F1"))
-        assertTrue(graph!!.isLess("B", "F2"))
-        assertTrue(graph!!.isLess("B", "F3"))
-        assertTrue(graph!!.isLess("F1", "F2"))
-        assertTrue(graph!!.isLess("F1", "F3"))
-        assertTrue(graph!!.isLess("F2", "F3"))
+        assertTrue(graph.isLess("B", "F1"))
+        assertTrue(graph.isLess("B", "F2"))
+        assertTrue(graph.isLess("B", "F3"))
+        assertTrue(graph.isLess("F1", "F2"))
+        assertTrue(graph.isLess("F1", "F3"))
+        assertTrue(graph.isLess("F2", "F3"))
 
-        assertFalse(graph!!.isLess("F1", "B"))
-        assertFalse(graph!!.isLess("F2", "B"))
-        assertFalse(graph!!.isLess("F3", "B"))
-        assertFalse(graph!!.isLess("F2", "F1"))
-        assertFalse(graph!!.isLess("F3", "F1"))
-        assertFalse(graph!!.isLess("F3", "F2"))
+        assertFalse(graph.isLess("F1", "B"))
+        assertFalse(graph.isLess("F2", "B"))
+        assertFalse(graph.isLess("F3", "B"))
+        assertFalse(graph.isLess("F2", "F1"))
+        assertFalse(graph.isLess("F3", "F1"))
+        assertFalse(graph.isLess("F3", "F2"))
 
         for (g1 in listOf("A1", "A2", "A3", "A4")) {
             for (g2 in listOf("F1", "F2", "F3", "B")) {
-                assertFalse(graph!!.isLess(g1, g2))
+                assertFalse(graph.isLess(g1, g2))
             }
         }
     }
