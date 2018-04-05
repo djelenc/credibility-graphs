@@ -42,7 +42,7 @@ enum class Extreme {
 /**
  * Represents a knowledge-base of credibility objects
  */
-class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
+open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     // finds paths between graph nodes
     private val pathFinder = AllDirectedPaths(graph)
 
@@ -137,6 +137,12 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
+     * Returns true iff [source] is less credible than the [target] in the transitive
+     * closure of given graph; false otherwise.
+     */
+    open internal fun isLessCredible(source: String, target: String, graph: KnowledgeBase = this) = isLess(source, target, graph)
+
+    /**
      * Finds all paths between given [source] and [target] vertex
      * @return A list of paths
      */
@@ -195,8 +201,8 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
 
         val existing = set.map {
             ComparisonToCredibilityObject(obj = it,
-                    isLess = isLess(it.reporter, credibilityObject.reporter, graph),
-                    isMore = isLess(credibilityObject.reporter, it.reporter, graph))
+                    isLess = isLessCredible(it.reporter, credibilityObject.reporter, graph),
+                    isMore = isLessCredible(credibilityObject.reporter, it.reporter, graph))
         }
 
         return when (extreme) {
@@ -261,7 +267,7 @@ class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      */
     fun nonPrioritizedRevision(credibilityObject: CredibilityObject): Boolean {
         val reliabilityOfOpposite = reliability(credibilityObject.target, credibilityObject.source)
-        val objIsMoreReliable = reliabilityOfOpposite.all { isLess(it, credibilityObject.reporter) }
+        val objIsMoreReliable = reliabilityOfOpposite.all { isLessCredible(it, credibilityObject.reporter) }
 
         return if (objIsMoreReliable) {
             prioritizedRevision(credibilityObject)
