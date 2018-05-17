@@ -1,11 +1,8 @@
 package credibilitygraphs.core
 
+import junit.framework.TestCase.*
 import org.junit.Before
 import org.junit.Test
-import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 
 class NumericKBTest {
@@ -13,87 +10,87 @@ class NumericKBTest {
 
     @Before
     fun setUp() {
-        graph = NumericKnowledgeBase("(A1,A2,F1),(A1,A3,F1),(A2,A4,B),(A2,A4,F3),(A3,A4,F2)")
-        graph.pastAccuracy["B"] = NumericKnowledgeBase.PastAccuracy(0, 3)
-        graph.pastAccuracy["F1"] = NumericKnowledgeBase.PastAccuracy(1, 2)
-        graph.pastAccuracy["F2"] = NumericKnowledgeBase.PastAccuracy(2, 1)
-        graph.pastAccuracy["F3"] = NumericKnowledgeBase.PastAccuracy(3, 0)
+        graph = NumericKnowledgeBase("(11,12,1),(11,13,1),(12,14,0),(12,14,3),(13,14,2)")
+        graph.pastAccuracy[0] = NumericKnowledgeBase.PastAccuracy(0, 3)
+        graph.pastAccuracy[1] = NumericKnowledgeBase.PastAccuracy(1, 2)
+        graph.pastAccuracy[2] = NumericKnowledgeBase.PastAccuracy(2, 1)
+        graph.pastAccuracy[3] = NumericKnowledgeBase.PastAccuracy(3, 0)
     }
+
 
     @Test
     fun expansionSuccess() {
-        assertTrue(graph.expansion(CredibilityObject("A1", "F3", "A2")))
-        assertTrue(graph.graph.containsEdge("A1", "F3"))
-        assertEquals("A2", graph.graph.getEdge("A1", "F3").reporter)
+        assertTrue(graph.expansion(CredibilityObject(11, 3, 12)))
+        assertTrue(graph.graph.containsEdge(11, 3))
+        assertEquals(12, graph.graph.getEdge(11, 3).reporter)
     }
 
     @Test
     fun expansionFailure() {
         val before = graph.graph.edgeSet()
-        assertFalse(graph.expansion(CredibilityObject("A4", "A1", "A2")))
+        assertFalse(graph.expansion(CredibilityObject(14, 11, 12)))
         assertEquals(before, graph.graph.edgeSet())
     }
 
     @Test
     fun minimalSources() {
-        val expected = HashSet<CredibilityObject>()
-        Collections.addAll(expected,
-                CredibilityObject("A1", "A2", "F1"),
-                CredibilityObject("A2", "A4", "B"),
-                CredibilityObject("A1", "A3", "F1"))
+        val expected = setOf(
+                CredibilityObject(11, 12, 1),
+                CredibilityObject(12, 14, 0),
+                CredibilityObject(11, 13, 1))
 
-        assertEquals(expected, graph.getExtremes("A1", "A4", Extreme.MIN))
+        assertEquals(expected, graph.getExtremes(11, 14, Extreme.MIN))
     }
 
     @Test
     fun minimalSourcesIncomparable() {
-        val graph = NumericKnowledgeBase("(A,B,1),(A,C,5),(B,D,4),(C,D,3)")
         // credibility: (4,5,A),(1,5,A),(2,5,A),(3,5,A)
-        graph.pastAccuracy["5"] = NumericKnowledgeBase.PastAccuracy(1, 0)
+        val graph = NumericKnowledgeBase("(11,12,1),(11,13,5),(12,14,4),(13,14,3)")
+        graph.pastAccuracy[5] = NumericKnowledgeBase.PastAccuracy(1, 0)
 
         val expected = setOf(
-                CredibilityObject("A", "B", "1"),
-                CredibilityObject("B", "D", "4"),
-                CredibilityObject("C", "D", "3"))
+                CredibilityObject(11, 12, 1),
+                CredibilityObject(12, 14, 4),
+                CredibilityObject(13, 14, 3))
 
-        assertEquals(expected, graph.getExtremes("A", "D", Extreme.MIN))
+        assertEquals(expected, graph.getExtremes(11, 14, Extreme.MIN))
     }
 
     @Test
     fun contraction() {
-        val before = graph.getAllPaths("A1", "A4")
+        val before = graph.getAllPaths(11, 14)
         assertEquals(3, before.size)
         assertEquals(5, graph.graph.edgeSet().size)
 
-        graph.contraction("A1", "A4")
+        graph.contraction(11, 14)
 
-        val after = graph.getAllPaths("A1", "A4")
+        val after = graph.getAllPaths(11, 14)
         assertEquals(0, after.size)
         assertEquals(2, graph.graph.edgeSet().size)
     }
 
     @Test
     fun prioritizedRevision() {
-        val before = graph.getAllPaths("A2", "A1")
+        val before = graph.getAllPaths(12, 11)
         assertEquals(0, before.size)
         assertEquals(5, graph.graph.edgeSet().size)
 
-        assertTrue(graph.prioritizedRevision(CredibilityObject("A4", "A1", "F3")))
+        assertTrue(graph.prioritizedRevision(CredibilityObject(14, 11, 3)))
 
-        val after = graph.getAllPaths("A2", "A1")
+        val after = graph.getAllPaths(12, 11)
         assertEquals(1, after.size)
         assertEquals(3, graph.graph.edgeSet().size)
     }
 
     @Test
     fun prioritizedRevisionNoRemoval() {
-        val before = graph.getAllPaths("A1", "A4")
+        val before = graph.getAllPaths(11, 14)
         assertEquals(3, before.size)
         assertEquals(5, graph.graph.edgeSet().size)
 
-        assertTrue(graph.prioritizedRevision(CredibilityObject("A1", "A4", "F3")))
+        assertTrue(graph.prioritizedRevision(CredibilityObject(11, 14, 3)))
 
-        val after = graph.getAllPaths("A1", "A4")
+        val after = graph.getAllPaths(11, 14)
         assertEquals(4, after.size)
         assertEquals(6, graph.graph.edgeSet().size)
     }
@@ -101,67 +98,67 @@ class NumericKBTest {
     @Test
     fun maximalSources() {
         val expected = setOf(
-                CredibilityObject("A1", "A2", "F1"),
-                CredibilityObject("A2", "A4", "F3"),
-                CredibilityObject("A3", "A4", "F2"))
+                CredibilityObject(11, 12, 1),
+                CredibilityObject(12, 14, 3),
+                CredibilityObject(13, 14, 2))
 
-        assertEquals(expected, graph.getExtremes("A1", "A4", Extreme.MAX))
+        assertEquals(expected, graph.getExtremes(11, 14, Extreme.MAX))
     }
 
     @Test
     fun reliability() {
-        val expected = setOf("F1")
-        assertEquals(expected, graph.reliability("A1", "A4"))
+        val expected = setOf(1)
+        assertEquals(expected, graph.reliability(11, 14))
     }
 
     @Test
     fun nonPrioritizedRevisionSimpleExpansion() {
-        assertTrue(graph.nonPrioritizedRevision(CredibilityObject("A1", "A4", "B")))
+        assertTrue(graph.nonPrioritizedRevision(CredibilityObject(11, 14, 0)))
 
-        val after = graph.getAllPaths("A1", "A4")
+        val after = graph.getAllPaths(11, 14)
         assertEquals(4, after.size)
         assertEquals(6, graph.graph.edgeSet().size)
     }
 
     @Test
     fun nonPrioritizedRevisionRejection() {
-        val pathsBefore = graph.getAllPaths("A4", "A1")
-        assertFalse(graph.nonPrioritizedRevision(CredibilityObject("A4", "A1", "B")))
-        assertEquals(pathsBefore, graph.getAllPaths("A4", "A1"))
+        val pathsBefore = graph.getAllPaths(14, 11)
+        assertFalse(graph.nonPrioritizedRevision(CredibilityObject(14, 11, 0)))
+        assertEquals(pathsBefore, graph.getAllPaths(14, 11))
     }
 
     @Test
     fun nonPrioritizedRevisionMoreCredibleObject() {
-        assertTrue(graph.nonPrioritizedRevision(CredibilityObject("A4", "A1", "F3")))
+        assertTrue(graph.nonPrioritizedRevision(CredibilityObject(14, 11, 3)))
 
         val expected = setOf(
-                CredibilityObject("A2", "A4", "F3"),
-                CredibilityObject("A4", "A1", "F3"),
-                CredibilityObject("A3", "A4", "F2"))
+                CredibilityObject(12, 14, 3),
+                CredibilityObject(14, 11, 3),
+                CredibilityObject(13, 14, 2))
 
         assertEquals(expected, graph.graph.edgeSet())
     }
 
     @Test
     fun isLess() {
-        assertTrue(graph.isLess("A1", "A2"))
-        assertTrue(graph.isLess("A1", "A4"))
-        assertTrue(graph.isLess("A1", "A3"))
-        assertTrue(graph.isLess("A3", "A4"))
-        assertTrue(graph.isLess("A2", "A4"))
+        assertTrue(graph.isLess(11, 12))
+        assertTrue(graph.isLess(11, 14))
+        assertTrue(graph.isLess(11, 13))
+        assertTrue(graph.isLess(13, 14))
+        assertTrue(graph.isLess(12, 14))
 
-        assertFalse(graph.isLess("A2", "A1"))
-        assertFalse(graph.isLess("A4", "A1"))
-        assertFalse(graph.isLess("A3", "A1"))
-        assertFalse(graph.isLess("A4", "A3"))
-        assertFalse(graph.isLess("A4", "A2"))
+        assertFalse(graph.isLess(12, 11))
+        assertFalse(graph.isLess(14, 11))
+        assertFalse(graph.isLess(13, 11))
+        assertFalse(graph.isLess(14, 13))
+        assertFalse(graph.isLess(14, 12))
     }
 
     @Test
     fun maxCurrentEmpty() {
-        val graph = NumericKnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z)")
-        val current = setOf<CredibilityObject>()
-        val co = CredibilityObject("A", "B", "X")
+        val graph = NumericKnowledgeBase("(11, 12, 1), (12, 13, 2), (13, 14, 3)")
+        val current = setOf<CredibilityObject<Int, Int>>()
+        val co = CredibilityObject(11, 12, 1)
 
         val expected = setOf(co)
         val actual = graph.extreme(current, co, Extreme.MAX, graph)
@@ -171,14 +168,14 @@ class NumericKBTest {
 
     @Test
     fun maxCurrentSmaller() {
-        val graph = NumericKnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z)")
-        graph.pastAccuracy["A"] = NumericKnowledgeBase.PastAccuracy(0, 0)
-        graph.pastAccuracy["B"] = NumericKnowledgeBase.PastAccuracy(1, 0)
-        graph.pastAccuracy["C"] = NumericKnowledgeBase.PastAccuracy(2, 0)
-        graph.pastAccuracy["D"] = NumericKnowledgeBase.PastAccuracy(3, 0)
+        val graph = NumericKnowledgeBase("(1, 2, 5), (2, 3, 6), (3, 4, 7)")
+        graph.pastAccuracy[1] = NumericKnowledgeBase.PastAccuracy(0, 0)
+        graph.pastAccuracy[2] = NumericKnowledgeBase.PastAccuracy(1, 0)
+        graph.pastAccuracy[3] = NumericKnowledgeBase.PastAccuracy(2, 0)
+        graph.pastAccuracy[4] = NumericKnowledgeBase.PastAccuracy(3, 0)
 
-        val current = setOf(CredibilityObject("1", "4", "C"))
-        val co = CredibilityObject("2", "3", "D")
+        val current = setOf(CredibilityObject(11, 14, 3))
+        val co = CredibilityObject(12, 13, 4)
 
         val expected = setOf(co)
         val actual = graph.extreme(current, co, Extreme.MAX, graph)
@@ -188,14 +185,14 @@ class NumericKBTest {
 
     @Test
     fun maxCurrentBigger() {
-        val graph = NumericKnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z)")
-        graph.pastAccuracy["A"] = NumericKnowledgeBase.PastAccuracy(0, 0)
-        graph.pastAccuracy["B"] = NumericKnowledgeBase.PastAccuracy(1, 0)
-        graph.pastAccuracy["C"] = NumericKnowledgeBase.PastAccuracy(2, 0)
-        graph.pastAccuracy["D"] = NumericKnowledgeBase.PastAccuracy(3, 0)
+        val graph = NumericKnowledgeBase("(1, 2, 5), (2, 3, 6), (3, 4, 7)")
+        graph.pastAccuracy[1] = NumericKnowledgeBase.PastAccuracy(0, 0)
+        graph.pastAccuracy[2] = NumericKnowledgeBase.PastAccuracy(1, 0)
+        graph.pastAccuracy[3] = NumericKnowledgeBase.PastAccuracy(2, 0)
+        graph.pastAccuracy[4] = NumericKnowledgeBase.PastAccuracy(3, 0)
 
-        val current = setOf(CredibilityObject("1", "4", "D"))
-        val co = CredibilityObject("2", "3", "C")
+        val current = setOf(CredibilityObject(11, 14, 4))
+        val co = CredibilityObject(12, 13, 3)
 
         val actual = graph.extreme(current, co, Extreme.MAX, graph)
 
@@ -204,15 +201,15 @@ class NumericKBTest {
 
     @Test
     fun maxCurrentIncomparable() {
-        val graph = NumericKnowledgeBase("(A, B, X), (B, C, Y), (C, D, Z), (A, E, W)")
-        graph.pastAccuracy["A"] = NumericKnowledgeBase.PastAccuracy(0, 0)
-        graph.pastAccuracy["B"] = NumericKnowledgeBase.PastAccuracy(1, 0)
-        graph.pastAccuracy["C"] = NumericKnowledgeBase.PastAccuracy(2, 0)
-        graph.pastAccuracy["D"] = NumericKnowledgeBase.PastAccuracy(3, 0)
-        graph.pastAccuracy["E"] = NumericKnowledgeBase.PastAccuracy(3, 0)
-        // D and E are incomparable
-        val current = setOf(CredibilityObject("1", "4", "D"))
-        val co = CredibilityObject("2", "3", "E")
+        val graph = NumericKnowledgeBase("(1, 2, 6), (2, 3, 7), (3, 4, 8), (1, 5, 9)")
+        graph.pastAccuracy[1] = NumericKnowledgeBase.PastAccuracy(0, 0)
+        graph.pastAccuracy[2] = NumericKnowledgeBase.PastAccuracy(1, 0)
+        graph.pastAccuracy[3] = NumericKnowledgeBase.PastAccuracy(2, 0)
+        graph.pastAccuracy[4] = NumericKnowledgeBase.PastAccuracy(3, 0)
+        graph.pastAccuracy[5] = NumericKnowledgeBase.PastAccuracy(3, 0)
+        // 4 and 5 are incomparable
+        val current = setOf(CredibilityObject(11, 14, 4))
+        val co = CredibilityObject(12, 13, 5)
 
         val expected = current + co
         val actual = graph.extreme(current, co, Extreme.MAX, graph)
@@ -222,22 +219,22 @@ class NumericKBTest {
 
     @Test
     fun getExtremeFromCollection() {
-        val graph = NumericKnowledgeBase("(A, D, Y), (B, D, Y), (E, A, Y), (E, B, Y)")
-        graph.pastAccuracy["E"] = NumericKnowledgeBase.PastAccuracy(0, 5)
-        graph.pastAccuracy["D"] = NumericKnowledgeBase.PastAccuracy(1, 0)
+        val graph = NumericKnowledgeBase("(1, 4, 33), (2, 4, 33), (5, 1, 33), (5, 2, 33)")
+        graph.pastAccuracy[5] = NumericKnowledgeBase.PastAccuracy(0, 5)
+        graph.pastAccuracy[4] = NumericKnowledgeBase.PastAccuracy(1, 0)
         val collection = setOf(
-                CredibilityObject("1", "2", "A"),
-                CredibilityObject("3", "4", "B"),
-                CredibilityObject("7", "8", "D"),
-                CredibilityObject("9", "0", "E")
+                CredibilityObject(11, 12, 1),
+                CredibilityObject(13, 14, 2),
+                CredibilityObject(17, 18, 4),
+                CredibilityObject(19, 10, 5)
         )
 
-        val expectedMax = setOf(CredibilityObject("7", "8", "D"))
+        val expectedMax = setOf(CredibilityObject(17, 18, 4))
         val actualMax = graph.getExtremes(collection, Extreme.MAX)
 
         assertEquals(expectedMax, actualMax)
 
-        val expectedMin = setOf(CredibilityObject("9", "0", "E"))
+        val expectedMin = setOf(CredibilityObject(19, 10, 5))
         val actualMin = graph.getExtremes(collection, Extreme.MIN)
 
         assertEquals(expectedMin, actualMin)

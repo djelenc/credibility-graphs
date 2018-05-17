@@ -2,15 +2,25 @@ package credibilitygraphs.parser;
 
 import credibilitygraphs.core.CredibilityObject;
 import org.antlr.v4.runtime.tree.TerminalNode;
-import org.jgrapht.Graph;
-import org.jgrapht.graph.DirectedMultigraph;
 
-import java.util.Iterator;
+import java.util.*;
+import java.util.function.Function;
 
-public class Visitor extends GraphBaseVisitor<Graph<String, CredibilityObject>> {
+public class Visitor<N, L, CO extends CredibilityObject<N, L>> extends GraphBaseVisitor<List<CO>> {
+
+    private final Function<String, N> nodeMaker;
+    private final Function<String, L> labelMaker;
+    private final TriFunction<N, N, L, CO> coMaker;
+
+    public Visitor(Function<String, N> nodeMaker, Function<String, L> labelMaker, TriFunction<N, N, L, CO> coMaker) {
+        this.nodeMaker = nodeMaker;
+        this.labelMaker = labelMaker;
+        this.coMaker = coMaker;
+    }
+
     @Override
-    public Graph<String, CredibilityObject> visitStat(GraphParser.StatContext ctx) {
-        final Graph<String, CredibilityObject> graph = new DirectedMultigraph<>(CredibilityObject.class);
+    public List<CO> visitStat(GraphParser.StatContext ctx) {
+        final List<CO> list = new ArrayList<>();
 
         final Iterator<TerminalNode> iterator = ctx.NODE().iterator();
 
@@ -19,14 +29,13 @@ public class Visitor extends GraphBaseVisitor<Graph<String, CredibilityObject>> 
             final TerminalNode right = iterator.next();
             final TerminalNode reporter = iterator.next();
 
-            graph.addVertex(left.getText());
-            graph.addVertex(right.getText());
-            graph.addEdge(
-                    left.getText(),
-                    right.getText(),
-                    new CredibilityObject(left.getText(), right.getText(), reporter.getText()));
+            final CO co = coMaker.apply(
+                    nodeMaker.apply(left.getText()),
+                    nodeMaker.apply(right.getText()),
+                    labelMaker.apply(reporter.getText()));
+            list.add(co);
         }
 
-        return graph;
+        return list;
     }
 }

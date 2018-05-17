@@ -29,107 +29,39 @@ import java.io.IOException
  * Represents a credibility object with [source], [target] and a [reporter].
  *
  * In a credibility graph, the credibility object is effectively an edge between
- * source and target with the reporter being its label.
+ * src and tgt with the reporter being its label.
  */
-data class CredibilityObject(val source: String, val target: String, val reporter: String) : DefaultEdge() {
-    override fun toString() = "$reporter ($source-$target)"
+data class CredibilityObject<Node, Edge>(val src: Node, val tgt: Node, val reporter: Edge) : DefaultEdge() {
+    override fun toString(): String = "$reporter ($src-$tgt)"
 }
 
-enum class Extreme {
-    MIN, MAX
-}
+enum class Extreme { MIN, MAX }
+
+enum class Comparison { LESS, MORE, INCOMPARABLE }
 
 /**
  * Represents a knowledge-base of credibility objects
  */
-open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
+abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>>(val graph: Graph<Node, CredObj>) {
+
     // finds paths between graph nodes
     private val pathFinder = AllDirectedPaths(graph)
 
     // finds cycles in a graph
     private val cycleFinder = HawickJamesSimpleCycles(graph)
 
-    constructor(credibilityObjects: String = "") : this(parseObjects(credibilityObjects))
-
-    companion object {
-        /**
-         * Parses given string of credibility objects and returns a directed multi graph
-         *
-         * @param graph
-         * @return directed multi-graph
-         */
-        fun parseObjects(graph: String): Graph<String, CredibilityObject> {
-            if (graph == "") {
-                // TODO: improve this!
-                return DirectedMultigraph<String, CredibilityObject>(CredibilityObject::class.java)
-            }
-
-            val ais = ANTLRInputStream(graph)
-            val lexer = GraphLexer(ais)
-            val tokens = CommonTokenStream(lexer)
-            val parser = GraphParser(tokens)
-            val tree = parser.stat()
-            val v = Visitor()
-            return v.visit(tree)
-        }
-    }
+    abstract fun makeInstance(graph: Graph<Node, CredObj>): KnowledgeBase<Node, Edge, CredObj>
 
     /**
-     * Exports given graph into DOT format and saves it into file using given format.
-     * The DOT exporter requires the graphviz be installed.
-     *
-     * @param fileName
-     * @param format
-     * @param edgeLabels include label in edges
-     * @throws ExportException
+     * Returns true iff [source] is less credible than the [target] in the transitive
+     * closure of given graph; false otherwise.
      */
-    fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean = true) {
-        val exporter = DOTExporter<String, CredibilityObject>(
-                ComponentNameProvider<String> { it.toString() }, null,
-                if (edgeLabels) ComponentNameProvider<CredibilityObject> { it.reporter } else null)
-
-        val stream = ByteArrayOutputStream()
-        try {
-            exporter.exportGraph(graph, stream)
-        } catch (e: ExportException) {
-            throw IOException(e)
-        }
-
-        val mutableGraph = Parser.read(ByteArrayInputStream(stream.toByteArray()))
-        mutableGraph.generalAttrs().add(RankDir.LEFT_TO_RIGHT)
-        Graphviz.fromGraph(mutableGraph)
-                .render(format)
-                .toFile(File(fileName + "." + format.name.toLowerCase()))
-    }
-
-    /**
-     * Exports given graph into GraphML format and saves it into file with
-     * .graphml extension.
-     *
-     * @param fileName
-     */
-    fun exportGraphML(fileName: String) {
-        val exporter = GraphMLExporter<String, CredibilityObject>().apply {
-            setVertexIDProvider({ it.toString() })
-            setVertexLabelProvider({ it.toString() })
-            setEdgeLabelProvider({ it.reporter })
-            setEdgeIDProvider { it.hashCode().toString() }
-            vertexLabelAttributeName = "Text"
-            edgeLabelAttributeName = "Text"
-        }
-
-        try {
-            exporter.exportGraph(graph, File("$fileName.graphml"))
-        } catch (e: ExportException) {
-            throw IOException(e)
-        }
-
-    }
+    abstract fun isLessCredible(source: Edge, target: Edge, graph: KnowledgeBase<Node, Edge, CredObj> = this): Boolean
 
     /**
      * Returns true iff [source] < [target] in the transitive closure; false otherwise
      */
-    internal fun isLess(source: String, target: String, graph: KnowledgeBase = this): Boolean {
+    internal fun isLess(source: Node, target: Node, graph: KnowledgeBase<Node, Edge, CredObj> = this): Boolean {
         val algorithm = if (graph == this) this.pathFinder else AllDirectedPaths(graph.graph)
         return graph.graph.containsVertex(source) &&
                 graph.graph.containsVertex(target) &&
@@ -137,16 +69,23 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     }
 
     /**
-     * Returns true iff [source] is less credible than the [target] in the transitive
-     * closure of given graph; false otherwise.
+     * Compares [source] to [target] and returns [Comparison.LESS], [Comparison.MORE], or
+     * [Comparison.INCOMPARABLE].
+     *
+     * Throws and error if the knowledge-base is inconsistent.
      */
-    open internal fun isLessCredible(source: String, target: String, graph: KnowledgeBase = this) = isLess(source, target, graph)
+    internal fun compare(source: Node, target: Node, kb: KnowledgeBase<Node, Edge, CredObj> = this): Comparison = when {
+        kb.isLess(source, target) && !kb.isLess(target, source) -> Comparison.LESS
+        !kb.isLess(source, target) && kb.isLess(target, source) -> Comparison.MORE
+        !kb.isLess(source, target) && !kb.isLess(target, source) -> Comparison.INCOMPARABLE
+        else -> throw Error("$source < $target AND $target < $source -- KB is inconsistent")
+    }
 
     /**
      * Finds all paths between given [source] and [target] vertex
      * @return A list of paths
      */
-    internal fun getAllPaths(source: String, target: String): List<GraphPath<String, CredibilityObject>> =
+    internal fun getAllPaths(source: Node, target: Node): List<GraphPath<Node, CredObj>> =
             pathFinder.getAllPaths(source, target, false, graph.edgeSet().size)
 
     /**
@@ -154,11 +93,11 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * the [credibilityObject] contradicts current knowledge-base.
      * @return true on success, false otherwise
      */
-    fun expansion(credibilityObject: CredibilityObject): Boolean = when {
-        !isLess(credibilityObject.target, credibilityObject.source) -> {
-            graph.addVertex(credibilityObject.source)
-            graph.addVertex(credibilityObject.target)
-            graph.addEdge(credibilityObject.source, credibilityObject.target, credibilityObject)
+    fun expansion(credibilityObject: CredObj): Boolean = when {
+        !isLess(credibilityObject.tgt, credibilityObject.src) -> {
+            graph.addVertex(credibilityObject.src)
+            graph.addVertex(credibilityObject.tgt)
+            graph.addEdge(credibilityObject.src, credibilityObject.tgt, credibilityObject)
         }
         else -> false
     }
@@ -168,7 +107,7 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * paths between [source] and [target].
      * @return set of extremes
      */
-    internal fun getExtremes(source: String, target: String, type: Extreme): Set<CredibilityObject> =
+    internal fun getExtremes(source: Node, target: Node, type: Extreme): Set<CredObj> =
             getAllPaths(source, target) // get all paths
                     .flatMap { getExtremes(it.edgeList, type) } // get extreme(s) of each path
                     .toSet() // convert to set
@@ -179,8 +118,8 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      *
      * @return Set of credibility objects that have extreme reliability
      */
-    internal fun getExtremes(objects: Collection<CredibilityObject>, extreme: Extreme,
-                             graph: KnowledgeBase = this): Set<CredibilityObject> =
+    internal fun getExtremes(objects: Collection<CredObj>, extreme: Extreme,
+                             graph: KnowledgeBase<Node, Edge, CredObj> = this): Set<CredObj> =
             objects.fold(setOf(), { acc, credibilityObject -> extreme(acc, credibilityObject, extreme, graph) })
 
 
@@ -195,9 +134,9 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      *  returns all incomparable elements plus the biggest (smalles) among [credibilityObject] and the remaining
      *  comparable elements.
      */
-    internal fun extreme(set: Set<CredibilityObject>, credibilityObject: CredibilityObject,
-                         extreme: Extreme, graph: KnowledgeBase): Set<CredibilityObject> {
-        data class ComparisonToCredibilityObject(val obj: CredibilityObject, val isLess: Boolean, val isMore: Boolean)
+    internal fun extreme(set: Set<CredObj>, credibilityObject: CredObj,
+                         extreme: Extreme, graph: KnowledgeBase<Node, Edge, CredObj>): Set<CredObj> {
+        data class ComparisonToCredibilityObject(val obj: CredObj, val isLess: Boolean, val isMore: Boolean)
 
         val existing = set.map {
             ComparisonToCredibilityObject(obj = it,
@@ -232,7 +171,7 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     /**
      * Removes all paths from [source] to [target] by removing the minimal number of credibility objects.
      */
-    fun contraction(source: String, target: String) {
+    fun contraction(source: Node, target: Node) {
         val toRemove = getExtremes(source, target, Extreme.MIN)
         graph.removeAllEdges(toRemove)
     }
@@ -241,8 +180,8 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * Adds the [obj]ect to the knowledge-base, and assures the latter is consistent
      * @return true on success, false otherwise
      */
-    fun prioritizedRevision(obj: CredibilityObject): Boolean {
-        contraction(obj.target, obj.source)
+    fun prioritizedRevision(obj: CredObj): Boolean {
+        contraction(obj.tgt, obj.src)
         return expansion(obj)
     }
 
@@ -250,7 +189,7 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * Estimates the reliability of [source] being less than the [target].
      * @return the set of reporters claiming the [source] is less than the [target].
      */
-    internal fun reliability(source: String, target: String): Set<String> {
+    internal fun reliability(source: Node, target: Node): Set<Edge> {
         val minimalSources = getExtremes(source, target, Extreme.MIN)
         val maximalSources = getExtremes(minimalSources, Extreme.MAX)
 
@@ -265,8 +204,8 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      * [credibilityObject] is higher than the existing ones that contradict it.
      * @return true on success, false otherwise
      */
-    fun nonPrioritizedRevision(credibilityObject: CredibilityObject): Boolean {
-        val reliabilityOfOpposite = reliability(credibilityObject.target, credibilityObject.source)
+    fun nonPrioritizedRevision(credibilityObject: CredObj): Boolean {
+        val reliabilityOfOpposite = reliability(credibilityObject.tgt, credibilityObject.src)
         val objIsMoreReliable = reliabilityOfOpposite.all { isLessCredible(it, credibilityObject.reporter) }
 
         return if (objIsMoreReliable) {
@@ -281,15 +220,15 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
      *
      * @param input
      */
-    fun merge(input: KnowledgeBase) {
+    fun merge(input: KnowledgeBase<Node, Edge, CredObj>) {
         // make a backup for resolving cycles later
         val old = copy()
 
         // copy all vertices and edges from input into this graph
         input.graph.edgeSet().forEach {
-            graph.addVertex(it.source)
-            graph.addVertex(it.target)
-            graph.addEdge(it.source, it.target, it)
+            graph.addVertex(it.src)
+            graph.addVertex(it.tgt)
+            graph.addEdge(it.src, it.tgt, it)
         }
 
         // in every cycle, remove the least reliable edge
@@ -300,23 +239,35 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     }
 
     /** Creates a copy of this KnowledgeBase */
-    internal fun copy(): KnowledgeBase {
-        val newGraph = DirectedMultigraph<String, CredibilityObject>(CredibilityObject::class.java)
+    fun copy(): KnowledgeBase<Node, Edge, CredObj> {
+        // due to type erasure, generic types are unknown at runtime,
+        // so we have to inspect actual instances to know the type
+        val iterator = graph.edgeSet().iterator()
 
-        graph.edgeSet().forEach {
-            newGraph.addVertex(it.source)
-            newGraph.addVertex(it.target)
-            newGraph.addEdge(it.source, it.target,
-                    CredibilityObject(it.source, it.target, it.reporter))
+        if (!iterator.hasNext()) {
+            throw Error("Could not copy an empty graph!")
         }
 
-        return KnowledgeBase(newGraph)
+        val someCo = iterator.next()
+
+        val newGraph = DirectedMultigraph<Node, CredObj>(someCo::class.java)
+
+        graph.edgeSet().forEach {
+            newGraph.addVertex(it.src)
+            newGraph.addVertex(it.tgt)
+            @Suppress("UNCHECKED_CAST")
+            newGraph.addEdge(it.src, it.tgt, it.copy() as CredObj)
+        }
+
+        // return  javaClass.getDeclaredConstructor(javaClass).newInstance(newGraph)
+        // val new = javaClass.newInstance()
+        return makeInstance(newGraph)
     }
 
     /**
      * Finds all minimal cycles in current knowledge-base using lazy evaluation
      */
-    internal fun findCyclesLazy(): Sequence<GraphWalk<String, CredibilityObject>> = cycleFinder
+    internal fun findCyclesLazy(): Sequence<GraphWalk<Node, CredObj>> = cycleFinder
             .findSimpleCycles()
             .asSequence()
             .map {
@@ -328,7 +279,7 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     /**
      * Builds a sequence of GraphWalk instances from a list of vertexes usin lazy evaluation
      */
-    internal fun buildPathsLazy(vertexes: List<String>): Sequence<GraphWalk<String, CredibilityObject>> {
+    internal fun buildPathsLazy(vertexes: List<Node>): Sequence<GraphWalk<Node, CredObj>> {
         val source = vertexes[0]
 
         if (vertexes.size == 1) {
@@ -338,7 +289,7 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
         val target = vertexes[1]
 
         return graph.getAllEdges(source, target).asSequence().map {
-            val step = GraphWalk<String, CredibilityObject>(graph, source, target, listOf(it), 0.0)
+            val step = GraphWalk<Node, CredObj>(graph, source, target, listOf(it), 0.0)
             val nextPaths = buildPathsLazy(vertexes.subList(1, vertexes.size))
             nextPaths.map { step.concat(it, { 0.0 }) }
         }.flatten()
@@ -347,7 +298,7 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     /**
      * Finds all minimal cycles in current knowledge-base
      */
-    internal fun findCycles(): Set<GraphWalk<String, CredibilityObject>> = HawickJamesSimpleCycles(graph)
+    internal fun findCycles(): Set<GraphWalk<Node, CredObj>> = HawickJamesSimpleCycles(graph)
             .findSimpleCycles()
             .map {
                 it.add(it[0]) // connect the cycle
@@ -361,14 +312,14 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
     /**
      * Builds a sequence of GraphWalk instances from a list of vertexes
      */
-    internal fun buildPaths(vertexes: List<String>): Set<GraphWalk<String, CredibilityObject>> {
+    internal fun buildPaths(vertexes: List<Node>): Set<GraphWalk<Node, CredObj>> {
         val source = vertexes[0]
 
         if (vertexes.size == 1) {
             return setOf(GraphWalk.singletonWalk(graph, source))
         }
 
-        val allPaths = LinkedHashSet<GraphWalk<String, CredibilityObject>>()
+        val allPaths = LinkedHashSet<GraphWalk<Node, CredObj>>()
         val target = vertexes[1]
         val edges = graph.getAllEdges(source, target)
 
@@ -383,5 +334,88 @@ open class KnowledgeBase(val graph: Graph<String, CredibilityObject>) {
         }
 
         return allPaths
+    }
+
+    /**
+     * Exports the underlying knowledge base into DOT format graph and saves it into file using given format.
+     * The DOT exporter requires the graphviz be installed.
+     *
+     * @param fileName
+     * @param format
+     * @param edgeLabels include label in edges
+     * @throws ExportException
+     */
+    fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean = true) {
+        val exporter = DOTExporter<Node, CredObj>(
+                ComponentNameProvider<Node> { it.toString() }, null,
+                if (edgeLabels) ComponentNameProvider<CredObj> { it.reporter.toString() } else null)
+
+        val stream = ByteArrayOutputStream()
+        try {
+            exporter.exportGraph(graph, stream)
+        } catch (e: ExportException) {
+            throw IOException(e)
+        }
+
+        val mutableGraph = Parser.read(ByteArrayInputStream(stream.toByteArray()))
+        mutableGraph.generalAttrs().add(RankDir.LEFT_TO_RIGHT)
+        Graphviz.fromGraph(mutableGraph)
+                .render(format)
+                .toFile(File(fileName + "." + format.name.toLowerCase()))
+    }
+
+    /**
+     * Exports given graph into GraphML format and saves it into file with
+     * .graphml extension.
+     *
+     * @param fileName
+     */
+    fun exportGraphML(fileName: String) {
+        val exporter = GraphMLExporter<Node, CredObj>().apply {
+            setVertexIDProvider({ it.toString() })
+            setVertexLabelProvider({ it.toString() })
+            setEdgeLabelProvider({ it.reporter.toString() })
+            setEdgeIDProvider { it.hashCode().toString() }
+            vertexLabelAttributeName = "Text"
+            edgeLabelAttributeName = "Text"
+        }
+
+        try {
+            exporter.exportGraph(graph, File("$fileName.graphml"))
+        } catch (e: ExportException) {
+            throw IOException(e)
+        }
+
+    }
+
+    companion object {
+        /**
+         * Parses given string of credibility objects and returns a directed multi graph
+         */
+        fun <Node, Edge, CredObj : CredibilityObject<Node, Edge>>
+                parseText(text: String,
+                          nodeMaker: (String) -> Node,
+                          labelMaker: (String) -> Edge,
+                          coMaker: (Node, Node, Edge) -> CredObj,
+                          graphBuilder: () -> Graph<Node, CredObj>): Graph<Node, CredObj> {
+            val ais = ANTLRInputStream(text)
+            val lexer = GraphLexer(ais)
+            val tokens = CommonTokenStream(lexer)
+            val parser = GraphParser(tokens)
+            val tree = parser.stat()
+
+            val v = Visitor<Node, Edge, CredObj>(nodeMaker, labelMaker, coMaker)
+            val credibilityObjects = v.visit(tree)
+
+            val g = graphBuilder()
+
+            credibilityObjects.forEach {
+                g.addVertex(it.src)
+                g.addVertex(it.tgt)
+                g.addEdge(it.src, it.tgt, it)
+            }
+
+            return g
+        }
     }
 }

@@ -1,7 +1,8 @@
 package credibilitygraphs
 
 import credibilitygraphs.core.CredibilityObject
-import credibilitygraphs.core.KnowledgeBase
+import credibilitygraphs.core.NumericKnowledgeBase
+import credibilitygraphs.core.OriginalKnowledgeBase
 import guru.nidi.graphviz.engine.Format
 
 object App {
@@ -13,48 +14,54 @@ object App {
             "(J,K,E),(K,L,D),(D,E,G),(D,F,E),(E,G,F),(F,G,D)"
 
     fun paper() {
-        val kb1 = KnowledgeBase(EXAMPLE2)
+        val kb1 = OriginalKnowledgeBase(EXAMPLE2)
         kb1.exportDOT("./fig-1", Format.PNG)
 
-        val kb2 = KnowledgeBase(EXAMPLE2)
+        val kb2 = OriginalKnowledgeBase(EXAMPLE2)
         kb2.expansion(CredibilityObject("A1", "A3", "F2"))
         kb2.exportDOT("./fig-2-expansion", Format.PNG)
 
-        val kb3 = KnowledgeBase(EXAMPLE2)
+        val kb3 = OriginalKnowledgeBase(EXAMPLE2)
         kb3.contraction("A1", "A4")
         kb3.exportDOT("./fig-3-contraction", Format.PNG)
 
-        val kb4 = KnowledgeBase(EXAMPLE2)
+        val kb4 = OriginalKnowledgeBase(EXAMPLE2)
         kb4.nonPrioritizedRevision(CredibilityObject("A4", "A1", "B"))
         kb4.exportDOT("./fig-4-npr-revision", Format.PNG)
 
-        val kb5 = KnowledgeBase(EXAMPLE2)
+        val kb5 = OriginalKnowledgeBase(EXAMPLE2)
         kb5.prioritizedRevision(CredibilityObject("A4", "A1", "B"))
         kb5.exportDOT("./fig-5-pr-revision", Format.PNG)
 
-        val kb6 = KnowledgeBase(EXAMPLE13)
+        val kb6 = OriginalKnowledgeBase(EXAMPLE13)
         kb6.exportDOT("./fig-6", Format.PNG)
         // kb6.exportGraphML("./fig-6")
 
-        val kb7 = KnowledgeBase(EXAMPLE13)
+        val kb7 = OriginalKnowledgeBase(EXAMPLE13)
         kb7.nonPrioritizedRevision(CredibilityObject("L", "H", "G"))
         kb7.exportDOT("./fig-7-npr-revision", Format.PNG)
     }
 
     fun merge() {
-        val first = KnowledgeBase("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
+        val first = OriginalKnowledgeBase("(A, E, B), (D, B, A), (C, A, D), (B, A, E)")
         first.exportDOT("./merge-g1", Format.PNG)
 
-        val second = KnowledgeBase("(A, C, E), (C, D, B)")
+        val second = OriginalKnowledgeBase("(A, C, E), (C, D, B)")
         second.exportDOT("./merge-g2", Format.PNG)
 
         first.merge(second)
         first.exportDOT("./merge-merged", Format.PNG)
     }
+
+    fun numeric() {
+        val first = NumericKnowledgeBase("(1, 5, 2), (4, 2, 1), (3, 1, 4), (2, 1, 5)")
+        first.exportDOT("./numbers-1", Format.PNG)
+    }
 }
 
 fun main(args: Array<String>) {
-    App.paper()
+    // App.paper()
+    App.numeric()
     // App.merge()
 }
 

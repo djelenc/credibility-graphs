@@ -2,13 +2,14 @@ package credibilitygraphs.model
 
 import atb.interfaces.*
 import credibilitygraphs.core.CredibilityObject
-import credibilitygraphs.core.KnowledgeBase
+import credibilitygraphs.core.OriginalKnowledgeBase
 
 const val EXP = "exp"
 
 class CredibilityOrdersTM : TrustModel<PartialOrder> {
     // cumulative interaction outcomes
     private var exSum = DoubleArray(0)
+
     // interaction count
     private var exCnt = IntArray(0)
 
@@ -17,27 +18,19 @@ class CredibilityOrdersTM : TrustModel<PartialOrder> {
 
     private val experiences = LinkedHashMap<Int, Double>()
 
-    private var opinions = emptyList<Opinion>()
+    private var kbExp = OriginalKnowledgeBase()
 
-    private var kb = KnowledgeBase()
+    private var kbOp: MutableMap<String, OriginalKnowledgeBase> = HashMap()
 
     override fun processExperiences(new: List<Experience>) {
-        /*val printedExp = new.map { Pair(it.agent, String.format("%.2f", it.outcome)) }
-        println("$time: new = $printedExp")*/
+        // TODO
+        // - incremental KB-EXP creation (instead of making it from dict)
         for (e in new) {
             exSum[e.agent] += e.outcome
             exCnt[e.agent] += 1
             experiences[e.agent] = exSum[e.agent] / exCnt[e.agent]
         }
-        /*val printed = experiences.asSequence()
-                .sortedBy { (_, value) -> value }
-                .map { Pair(it.key, String.format("%.2f", it.value)) }
-                .toList()
-        println("$time: exp = $printed")
-        println()*/
-    }
 
-    override fun calculateTrust() {
         // 1) sort agents by average experience outcomes
         val sortedExperiences = experiences.asSequence()
                 .map { it.key to it.value }
@@ -45,7 +38,7 @@ class CredibilityOrdersTM : TrustModel<PartialOrder> {
 
         // 2) create a KB from experiences
         val worstExperience = sortedExperiences.first()
-        val (_, experienceKB) = sortedExperiences.drop(1).fold(Pair(worstExperience.first, KnowledgeBase()),
+        val (_, experienceKB) = sortedExperiences.drop(1).fold(Pair(worstExperience.first, OriginalKnowledgeBase()),
                 { (prev, currentGraph), (current, _) ->
                     val co = CredibilityObject(prev.toString(), current.toString(), EXP)
                     currentGraph.expansion(co)
@@ -53,19 +46,49 @@ class CredibilityOrdersTM : TrustModel<PartialOrder> {
                     Pair(current, currentGraph)
                 })
 
-        kb = experienceKB
+        kbExp = experienceKB
 
-        // debugging
-        /* val experiencePrint = kb.copy()
-        experiencePrint.graph.removeVertex(EXP)
-        experiencePrint.exportDOT("./tick-${time}-Experiences", Format.PNG) */
+        /*for (exp in new) {
+            // go through all opinions about the new experiences
+            for (agent in agents) {
+                var total = 0
+                var score = 0
 
-        // 3) Merge own (experience-based) KB with KBs obtain from other agents
-        // TODO: This operation depends on the order in which the KBs are merged
+                val kb = kbOp.getOrPut(agent.toString(), { KnowledgeBase() })
+
+                for (comparisonAgent in agents) {
+                    if (exp.agent == comparisonAgent) {
+                        continue
+                    }
+
+                    val cmpExp = kbExp.compare(comparisonAgent.toString(), exp.agent.toString())
+                    val cmpOp = kb.compare(comparisonAgent.toString(), exp.agent.toString())
+
+                    score += if (cmpExp == cmpOp) {
+                        1 // we agree, reward
+                    } else if (cmpExp == Comparison.LESS && cmpOp == Comparison.MORE ||
+                            cmpExp == Comparison.MORE && cmpOp == Comparison.LESS) {
+                        -1 // they claim the opposite, punish
+                    } else if (cmpExp == Comparison.INCOMPARABLE && cmpOp != Comparison.INCOMPARABLE) {
+                        -1 // if EXP says they are incomparable and they say otherwise, punish
+                    } else {
+                        0 // if they say incomparable, and EXP says MORE/LESS, do not punish
+                    }
+
+                    total += 1
+                }
+
+                val final = score.toFloat() / total.toFloat()
+
+                println("Score for $agent: $final")
+            }
+        }*/
+    }
+
+    override fun calculateTrust() = Unit
+
+    override fun processOpinions(opinions: List<Opinion>) {
         for (agent in agents) {
-            // experiences are more a reliable source than this agent
-            kb.expansion(CredibilityObject(agent.toString(), EXP, EXP))
-
             // all opinions from given agent, sorted by internal trust degrees
             val relevant = opinions.asSequence()
                     .filter { it.agent1 == agent && it.agent1 != it.agent2 }
@@ -73,7 +96,7 @@ class CredibilityOrdersTM : TrustModel<PartialOrder> {
 
             // create a KB from the list of opinions
             val worstOpinion = relevant.first()
-            val (_, opinionKB) = relevant.drop(1).fold(Pair(worstOpinion, KnowledgeBase()),
+            val (_, opinionKB) = relevant.drop(1).fold(Pair(worstOpinion, OriginalKnowledgeBase()),
                     { (previous, knowledgeBase), current ->
                         val co = CredibilityObject(previous.agent2.toString(),
                                 current.agent2.toString(),
@@ -83,28 +106,19 @@ class CredibilityOrdersTM : TrustModel<PartialOrder> {
                         Pair(current, knowledgeBase)
                     })
 
-            // only for debugging
-            /*val opinionPrint = opinionKB.copy()
-            opinionPrint.graph.removeVertex(EXP)
-            opinionPrint.exportDOT("./tick-${time}-Opinions-$agent", Format.PNG)*/
-
-            // merge current KB with the KB from this agent
-            kb.merge(opinionKB)
+            kbOp[agent.toString()] = opinionKB
         }
     }
 
-    override fun processOpinions(new: List<Opinion>) {
-        opinions = new
-    }
-
     override fun getTrust(service: Int): Map<Int, PartialOrder> {
+        return HashMap()
         // remove EXP vertex
-        kb.graph.removeVertex(EXP)
+        /*kb.graph.removeVertex(EXP)
         // kb.exportDOT("./tick-$time-Trust", Format.PNG)
 
         return kb.graph.vertexSet().asSequence()
                 .map { it.toInt() to PartialOrder(it, kb) }
-                .toMap()
+                .toMap()*/
     }
 
     private var agents: List<Int> = emptyList()
@@ -134,14 +148,14 @@ class CredibilityOrdersTM : TrustModel<PartialOrder> {
         time = current
     }
 
-    override fun initialize(vararg params: Any) {}
+    override fun initialize(vararg params: Any) = Unit
 
-    override fun setServices(services: List<Int>) {}
+    override fun setServices(services: List<Int>) = Unit
 
-    override fun setRandomGenerator(generator: RandomGenerator) {}
+    override fun setRandomGenerator(generator: RandomGenerator) = Unit
 }
 
-class PartialOrder(private val agent: String, private val kb: KnowledgeBase) : Comparable<PartialOrder> {
+class PartialOrder(private val agent: String, private val kb: OriginalKnowledgeBase) : Comparable<PartialOrder> {
     override fun compareTo(other: PartialOrder): Int = when {
         kb.isLess(this.agent, other.agent) -> -1 // this < other
         kb.isLess(other.agent, this.agent) -> 1 // this > other
