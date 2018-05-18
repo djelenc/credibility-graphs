@@ -7,7 +7,7 @@ import guru.nidi.graphviz.attribute.RankDir
 import guru.nidi.graphviz.engine.Format
 import guru.nidi.graphviz.engine.Graphviz
 import guru.nidi.graphviz.parse.Parser
-import org.antlr.v4.runtime.ANTLRInputStream
+import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.jgrapht.Graph
 import org.jgrapht.GraphPath
@@ -398,7 +398,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
                           labelMaker: (String) -> Edge,
                           coMaker: (Node, Node, Edge) -> CredObj,
                           graphBuilder: () -> Graph<Node, CredObj>): Graph<Node, CredObj> {
-            val ais = ANTLRInputStream(text)
+            val ais = CharStreams.fromString(text)
             val lexer = GraphLexer(ais)
             val tokens = CommonTokenStream(lexer)
             val parser = GraphParser(tokens)
