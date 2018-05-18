@@ -15,6 +15,8 @@
         <!-- kotlin.compiler.incremental>true</kotlin.compiler.incremental -->
         <kotlin.version>1.2.41</kotlin.version>
         <dokka.version>0.9.16</dokka.version>
+        <antlr4.visitor>true</antlr4.visitor>
+        <antlr4.listener>false</antlr4.listener>
     </properties>
 
     <pluginRepositories>
@@ -127,6 +129,18 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>4.7.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -179,6 +193,11 @@
             <groupId>com.github.djelenc</groupId>
             <artifactId>alpha-testbed</artifactId>
             <version>master-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>4.7.1</version>
         </dependency>
     </dependencies>
 </project>
