@@ -398,6 +398,10 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
                           labelMaker: (String) -> Edge,
                           coMaker: (Node, Node, Edge) -> CredObj,
                           graphBuilder: () -> Graph<Node, CredObj>): Graph<Node, CredObj> {
+            if (text.isEmpty()) {
+                return graphBuilder()
+            }
+
             val ais = CharStreams.fromString(text)
             val lexer = GraphLexer(ais)
             val tokens = CommonTokenStream(lexer)

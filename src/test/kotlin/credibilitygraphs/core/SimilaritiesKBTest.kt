@@ -15,8 +15,6 @@ class SimilaritiesKBTest {
 
     @Test
     fun maxCurrentIncomparable() {
-        graph.exportDOT("./a", Format.PNG)
-        // val a = "3.14".toDouble()
-        // assertEquals(expected, actual)
+        // graph.exportDOT("./z", Format.PNG)
     }
 }
