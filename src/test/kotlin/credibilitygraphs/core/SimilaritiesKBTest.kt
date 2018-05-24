@@ -1,6 +1,5 @@
 package credibilitygraphs.core
 
-import guru.nidi.graphviz.engine.Format
 import org.junit.Before
 import org.junit.Test
 

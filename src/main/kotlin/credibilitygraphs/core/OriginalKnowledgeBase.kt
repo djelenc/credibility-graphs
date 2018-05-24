@@ -3,16 +3,16 @@ package credibilitygraphs.core
 import org.jgrapht.Graph
 import org.jgrapht.graph.DirectedMultigraph
 
-class OriginalKnowledgeBase(graph: Graph<String, CredibilityObject<String, String>>) : KnowledgeBase<String, String, CredibilityObject<String, String>>(graph) {
+class OriginalKnowledgeBase(graph: Graph<String, CredibilityObject<String, String>>) : KnowledgeBase<String, String>(graph) {
 
     constructor(credibilityObjects: String = "")
             : this(parseText(credibilityObjects, { it }, { it },
             { s, t, l -> CredibilityObject(s, t, l) }, graphMaker))
 
-    override fun isLessCredible(source: String, target: String, graph: KnowledgeBase<String, String, CredibilityObject<String, String>>): Boolean =
+    override fun isLessCredible(source: String, target: String, graph: KnowledgeBase<String, String>): Boolean =
             isLess(source, target, graph)
 
-    override fun makeInstance(graph: Graph<String, CredibilityObject<String, String>>): KnowledgeBase<String, String, CredibilityObject<String, String>> =
+    override fun makeInstance(graph: Graph<String, CredibilityObject<String, String>>): KnowledgeBase<String, String> =
             OriginalKnowledgeBase(graph)
 
     companion object {

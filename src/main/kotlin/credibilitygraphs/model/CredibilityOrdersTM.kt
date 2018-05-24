@@ -140,7 +140,7 @@ class CredibilityOrdersTM : TrustModel<PartialOrder<Int, Double, CredibilityObje
 }
 
 class PartialOrder<Node, Edge, CredObj : CredibilityObject<Node, Edge>>(
-        private val agent: Node, private val kb: KnowledgeBase<Node, Edge, CredObj>)
+        private val agent: Node, private val kb: KnowledgeBase<Node, Edge>)
     : Comparable<PartialOrder<Node, Edge, CredObj>> {
     override fun compareTo(other: PartialOrder<Node, Edge, CredObj>): Int = when {
         kb.isLess(this.agent, other.agent) -> -1 // this < other

@@ -4,16 +4,16 @@ import org.jgrapht.Graph
 import org.jgrapht.graph.DirectedMultigraph
 
 class SimilaritiesKnowledgeBase(graph: Graph<Int, CredibilityObject<Int, Double>>)
-    : KnowledgeBase<Int, Double, CredibilityObject<Int, Double>>(graph) {
+    : KnowledgeBase<Int, Double>(graph) {
 
     constructor(text: String = "")
             : this(parseText(text, { it.toInt() }, { it.toDouble() },
             { s, t, l -> CredibilityObject(s, t, l) }, graphMaker))
 
-    override fun makeInstance(graph: Graph<Int, CredibilityObject<Int, Double>>): KnowledgeBase<Int, Double, CredibilityObject<Int, Double>> =
+    override fun makeInstance(graph: Graph<Int, CredibilityObject<Int, Double>>): KnowledgeBase<Int, Double> =
             SimilaritiesKnowledgeBase(graph)
 
-    override fun isLessCredible(source: Double, target: Double, graph: KnowledgeBase<Int, Double, CredibilityObject<Int, Double>>): Boolean =
+    override fun isLessCredible(source: Double, target: Double, graph: KnowledgeBase<Int, Double>): Boolean =
             source < target
 
     companion object {

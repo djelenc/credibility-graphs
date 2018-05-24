@@ -42,7 +42,7 @@ enum class Comparison { LESS, MORE, INCOMPARABLE }
 /**
  * Represents a knowledge-base of credibility objects
  */
-abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>>(val graph: Graph<Node, CredObj>) {
+abstract class KnowledgeBase<Node, Edge>(val graph: Graph<Node, CredibilityObject<Node, Edge>>) {
 
     // finds paths between graph nodes
     private val pathFinder = AllDirectedPaths(graph)
@@ -50,18 +50,18 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
     // finds cycles in a graph
     private val cycleFinder = HawickJamesSimpleCycles(graph)
 
-    abstract fun makeInstance(graph: Graph<Node, CredObj>): KnowledgeBase<Node, Edge, CredObj>
+    abstract fun makeInstance(graph: Graph<Node, CredibilityObject<Node, Edge>>): KnowledgeBase<Node, Edge>
 
     /**
      * Returns true iff [source] is less credible than the [target] in the transitive
      * closure of given graph; false otherwise.
      */
-    abstract fun isLessCredible(source: Edge, target: Edge, graph: KnowledgeBase<Node, Edge, CredObj> = this): Boolean
+    abstract fun isLessCredible(source: Edge, target: Edge, graph: KnowledgeBase<Node, Edge> = this): Boolean
 
     /**
      * Returns true iff [source] < [target] in the transitive closure; false otherwise
      */
-    internal fun isLess(source: Node, target: Node, graph: KnowledgeBase<Node, Edge, CredObj> = this): Boolean {
+    internal fun isLess(source: Node, target: Node, graph: KnowledgeBase<Node, Edge> = this): Boolean {
         val algorithm = if (graph == this) this.pathFinder else AllDirectedPaths(graph.graph)
         return graph.graph.containsVertex(source) &&
                 graph.graph.containsVertex(target) &&
@@ -74,7 +74,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      *
      * Throws and error if the knowledge-base is inconsistent.
      */
-    internal fun compare(source: Node, target: Node, kb: KnowledgeBase<Node, Edge, CredObj> = this): Comparison = when {
+    internal fun compare(source: Node, target: Node, kb: KnowledgeBase<Node, Edge> = this): Comparison = when {
         kb.isLess(source, target) && !kb.isLess(target, source) -> Comparison.LESS
         !kb.isLess(source, target) && kb.isLess(target, source) -> Comparison.MORE
         !kb.isLess(source, target) && !kb.isLess(target, source) -> Comparison.INCOMPARABLE
@@ -85,7 +85,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      * Finds all paths between given [source] and [target] vertex
      * @return A list of paths
      */
-    internal fun getAllPaths(source: Node, target: Node): List<GraphPath<Node, CredObj>> =
+    internal fun getAllPaths(source: Node, target: Node): List<GraphPath<Node, CredibilityObject<Node, Edge>>> =
             pathFinder.getAllPaths(source, target, false, graph.edgeSet().size)
 
     /**
@@ -93,7 +93,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      * the [credibilityObject] contradicts current knowledge-base.
      * @return true on success, false otherwise
      */
-    fun expansion(credibilityObject: CredObj): Boolean = when {
+    fun expansion(credibilityObject: CredibilityObject<Node, Edge>): Boolean = when {
         !isLess(credibilityObject.tgt, credibilityObject.src) -> {
             graph.addVertex(credibilityObject.src)
             graph.addVertex(credibilityObject.tgt)
@@ -107,7 +107,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      * paths between [source] and [target].
      * @return set of extremes
      */
-    internal fun getExtremes(source: Node, target: Node, type: Extreme): Set<CredObj> =
+    internal fun getExtremes(source: Node, target: Node, type: Extreme): Set<CredibilityObject<Node, Edge>> =
             getAllPaths(source, target) // get all paths
                     .flatMap { getExtremes(it.edgeList, type) } // get extreme(s) of each path
                     .toSet() // convert to set
@@ -118,8 +118,8 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      *
      * @return Set of credibility objects that have extreme reliability
      */
-    internal fun getExtremes(objects: Collection<CredObj>, extreme: Extreme,
-                             graph: KnowledgeBase<Node, Edge, CredObj> = this): Set<CredObj> =
+    internal fun getExtremes(objects: Collection<CredibilityObject<Node, Edge>>, extreme: Extreme,
+                             graph: KnowledgeBase<Node, Edge> = this): Set<CredibilityObject<Node, Edge>> =
             objects.fold(setOf(), { acc, credibilityObject -> extreme(acc, credibilityObject, extreme, graph) })
 
 
@@ -134,9 +134,9 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      *  returns all incomparable elements plus the biggest (smalles) among [credibilityObject] and the remaining
      *  comparable elements.
      */
-    internal fun extreme(set: Set<CredObj>, credibilityObject: CredObj,
-                         extreme: Extreme, graph: KnowledgeBase<Node, Edge, CredObj>): Set<CredObj> {
-        data class ComparisonToCredibilityObject(val obj: CredObj, val isLess: Boolean, val isMore: Boolean)
+    internal fun extreme(set: Set<CredibilityObject<Node, Edge>>, credibilityObject: CredibilityObject<Node, Edge>,
+                         extreme: Extreme, graph: KnowledgeBase<Node, Edge>): Set<CredibilityObject<Node, Edge>> {
+        data class ComparisonToCredibilityObject(val obj: CredibilityObject<Node, Edge>, val isLess: Boolean, val isMore: Boolean)
 
         val existing = set.map {
             ComparisonToCredibilityObject(obj = it,
@@ -180,7 +180,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      * Adds the [obj]ect to the knowledge-base, and assures the latter is consistent
      * @return true on success, false otherwise
      */
-    fun prioritizedRevision(obj: CredObj): Boolean {
+    fun prioritizedRevision(obj: CredibilityObject<Node, Edge>): Boolean {
         contraction(obj.tgt, obj.src)
         return expansion(obj)
     }
@@ -204,7 +204,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      * [credibilityObject] is higher than the existing ones that contradict it.
      * @return true on success, false otherwise
      */
-    fun nonPrioritizedRevision(credibilityObject: CredObj): Boolean {
+    fun nonPrioritizedRevision(credibilityObject: CredibilityObject<Node, Edge>): Boolean {
         val reliabilityOfOpposite = reliability(credibilityObject.tgt, credibilityObject.src)
         val objIsMoreReliable = reliabilityOfOpposite.all { isLessCredible(it, credibilityObject.reporter) }
 
@@ -220,7 +220,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      *
      * @param input
      */
-    fun merge(input: KnowledgeBase<Node, Edge, CredObj>) {
+    fun merge(input: KnowledgeBase<Node, Edge>) {
         // make a backup for resolving cycles later
         val old = copy()
 
@@ -239,7 +239,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
     }
 
     /** Creates a copy of this KnowledgeBase */
-    fun copy(): KnowledgeBase<Node, Edge, CredObj> {
+    fun copy(): KnowledgeBase<Node, Edge> {
         // due to type erasure, generic types are unknown at runtime,
         // so we have to inspect actual instances to know the type
         val iterator = graph.edgeSet().iterator()
@@ -250,13 +250,12 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
 
         val someCo = iterator.next()
 
-        val newGraph = DirectedMultigraph<Node, CredObj>(someCo::class.java)
+        val newGraph = DirectedMultigraph<Node, CredibilityObject<Node, Edge>>(someCo::class.java)
 
         graph.edgeSet().forEach {
             newGraph.addVertex(it.src)
             newGraph.addVertex(it.tgt)
-            @Suppress("UNCHECKED_CAST")
-            newGraph.addEdge(it.src, it.tgt, it.copy() as CredObj)
+            newGraph.addEdge(it.src, it.tgt, it.copy())
         }
 
         // return  javaClass.getDeclaredConstructor(javaClass).newInstance(newGraph)
@@ -267,7 +266,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
     /**
      * Finds all minimal cycles in current knowledge-base using lazy evaluation
      */
-    internal fun findCyclesLazy(): Sequence<GraphWalk<Node, CredObj>> = cycleFinder
+    internal fun findCyclesLazy(): Sequence<GraphWalk<Node, CredibilityObject<Node, Edge>>> = cycleFinder
             .findSimpleCycles()
             .asSequence()
             .map {
@@ -279,7 +278,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
     /**
      * Builds a sequence of GraphWalk instances from a list of vertexes usin lazy evaluation
      */
-    internal fun buildPathsLazy(vertexes: List<Node>): Sequence<GraphWalk<Node, CredObj>> {
+    internal fun buildPathsLazy(vertexes: List<Node>): Sequence<GraphWalk<Node, CredibilityObject<Node, Edge>>> {
         val source = vertexes[0]
 
         if (vertexes.size == 1) {
@@ -289,7 +288,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
         val target = vertexes[1]
 
         return graph.getAllEdges(source, target).asSequence().map {
-            val step = GraphWalk<Node, CredObj>(graph, source, target, listOf(it), 0.0)
+            val step = GraphWalk<Node, CredibilityObject<Node, Edge>>(graph, source, target, listOf(it), 0.0)
             val nextPaths = buildPathsLazy(vertexes.subList(1, vertexes.size))
             nextPaths.map { step.concat(it, { 0.0 }) }
         }.flatten()
@@ -298,7 +297,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
     /**
      * Finds all minimal cycles in current knowledge-base
      */
-    internal fun findCycles(): Set<GraphWalk<Node, CredObj>> = HawickJamesSimpleCycles(graph)
+    internal fun findCycles(): Set<GraphWalk<Node, CredibilityObject<Node, Edge>>> = HawickJamesSimpleCycles(graph)
             .findSimpleCycles()
             .map {
                 it.add(it[0]) // connect the cycle
@@ -312,14 +311,14 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
     /**
      * Builds a sequence of GraphWalk instances from a list of vertexes
      */
-    internal fun buildPaths(vertexes: List<Node>): Set<GraphWalk<Node, CredObj>> {
+    internal fun buildPaths(vertexes: List<Node>): Set<GraphWalk<Node, CredibilityObject<Node, Edge>>> {
         val source = vertexes[0]
 
         if (vertexes.size == 1) {
             return setOf(GraphWalk.singletonWalk(graph, source))
         }
 
-        val allPaths = LinkedHashSet<GraphWalk<Node, CredObj>>()
+        val allPaths = LinkedHashSet<GraphWalk<Node, CredibilityObject<Node, Edge>>>()
         val target = vertexes[1]
         val edges = graph.getAllEdges(source, target)
 
@@ -346,9 +345,9 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      * @throws ExportException
      */
     fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean = true) {
-        val exporter = DOTExporter<Node, CredObj>(
+        val exporter = DOTExporter<Node, CredibilityObject<Node, Edge>>(
                 ComponentNameProvider<Node> { it.toString() }, null,
-                if (edgeLabels) ComponentNameProvider<CredObj> { it.reporter.toString() } else null)
+                if (edgeLabels) ComponentNameProvider<CredibilityObject<Node, Edge>> { it.reporter.toString() } else null)
 
         val stream = ByteArrayOutputStream()
         try {
@@ -371,7 +370,7 @@ abstract class KnowledgeBase<Node, Edge, CredObj : CredibilityObject<Node, Edge>
      * @param fileName
      */
     fun exportGraphML(fileName: String) {
-        val exporter = GraphMLExporter<Node, CredObj>().apply {
+        val exporter = GraphMLExporter<Node, CredibilityObject<Node, Edge>>().apply {
             setVertexIDProvider({ it.toString() })
             setVertexLabelProvider({ it.toString() })
             setEdgeLabelProvider({ it.reporter.toString() })
