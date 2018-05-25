@@ -85,8 +85,11 @@ abstract class KnowledgeBase<Node, Edge>(val graph: Graph<Node, CredibilityObjec
      * Finds all paths between given [source] and [target] vertex
      * @return A list of paths
      */
-    internal fun getAllPaths(source: Node, target: Node): List<GraphPath<Node, CredibilityObject<Node, Edge>>> =
-            pathFinder.getAllPaths(source, target, false, graph.edgeSet().size)
+    internal fun getAllPaths(source: Node, target: Node): List<GraphPath<Node, CredibilityObject<Node, Edge>>> = when {
+        graph.vertexSet().containsAll(listOf(source, target)) -> pathFinder.getAllPaths(source, target, false, graph.edgeSet().size)
+        else -> emptyList()
+    }
+
 
     /**
      * Expands the knowledge-base by adding given [credibilityObject]. The expansion fails if
