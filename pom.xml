@@ -199,5 +199,10 @@
             <artifactId>antlr4-runtime</artifactId>
             <version>4.7.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.aparapi</groupId>
+            <artifactId>aparapi</artifactId>
+            <version>1.9.0</version>
+        </dependency>
     </dependencies>
 </project>
