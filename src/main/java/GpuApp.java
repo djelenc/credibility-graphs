@@ -19,6 +19,7 @@ public class GpuApp {
 
         final Range range = Range.create(result.length);
         kernel.execute(range);
+        System.out.println(kernel.getTargetDevice());
 
         System.out.println(Arrays.toString(result));
     }
