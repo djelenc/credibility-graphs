@@ -9,8 +9,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/* TODO:
+   - Vkljuci izkusnje v koncni izracun
+   - Vkljuci dejavnik odstotka preverjenih mnenje -- kaksen % prejetih mnenj se je dalo preveriti
+   - Vkljuci kredibilnost
+   - Vkljuci druzbeno povezanost
+   - Vkljuci casovno diskontiranje
+ */
 public class Schulze extends AbstractTrustModel<Order> {
-    private static final int SIZE = 10;
+    private static final int SIZE = 100;
 
     // opinions
     private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
@@ -22,6 +29,8 @@ public class Schulze extends AbstractTrustModel<Order> {
     private double[] xpSum = new double[SIZE];
     private boolean[][] xpPairwise = new boolean[SIZE][SIZE];
     private boolean[][] xpClosure = new boolean[SIZE][SIZE];
+    private int[] paRight = new int[SIZE];
+    private int[] paWrong = new int[SIZE];
 
     @Override
     public void initialize(Object... objects) {
@@ -66,6 +75,24 @@ public class Schulze extends AbstractTrustModel<Order> {
 
         // compute closure over pairwise experience comparisons
         xpClosure = closure(xpPairwise);
+
+        for (Experience ex : list) {
+            final int target = ex.agent;
+
+            for (int agent = 0; agent < opClosures.length; agent++) {
+                if (xpCount[agent] > 0) { // do we have an experience to compare this against
+                    final boolean value = xpClosure[agent][target];
+
+                    for (int reporter = 0; reporter < opClosures.length; reporter++) {
+                        if (value == opClosures[reporter][agent][target]) {
+                            paRight[reporter] += 1;
+                        } else {
+                            paWrong[reporter] += 1;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -106,7 +133,7 @@ public class Schulze extends AbstractTrustModel<Order> {
     }
 
     /**
-     * Computes transitive closure over given adjacency matrix
+     * Computes a transitive closure over given adjacency matrix
      *
      * @param adjacency matrix
      * @return transitive closure
@@ -130,7 +157,7 @@ public class Schulze extends AbstractTrustModel<Order> {
     }
 
     /**
-     * Sums all closure into preference matrix
+     * Sums all closures into preference matrix
      *
      * @param closures an array of closure matrices
      * @return component-wise sum of all closure matrices
@@ -138,10 +165,13 @@ public class Schulze extends AbstractTrustModel<Order> {
     private int[][] computePreferences(boolean[][][] closures) {
         final int[][] preferences = new int[SIZE][SIZE];
 
-        for (int agent1 = 0; agent1 < closures.length; agent1++) {
-            for (int agent2 = 0; agent2 < closures.length; agent2++) {
-                for (int reporter = 0; reporter < closures.length; reporter++) {
-                    preferences[agent1][agent2] += closures[reporter][agent1][agent2] ? 1 : 0;
+        for (int reporter = 0; reporter < closures.length; reporter++) {
+            for (int agent1 = 0; agent1 < closures.length; agent1++) {
+                for (int agent2 = 0; agent2 < closures.length; agent2++) {
+                    // preferences[agent1][agent2] += closures[reporter][agent1][agent2] ? 1 : 0;
+                    if (closures[reporter][agent1][agent2]) {
+                        preferences[agent1][agent2] += 1d / (1d + Math.exp(paWrong[reporter] - paRight[reporter]));
+                    }
                 }
             }
         }
