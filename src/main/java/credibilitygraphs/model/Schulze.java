@@ -10,11 +10,18 @@ import java.util.List;
 import java.util.Map;
 
 public class Schulze extends AbstractTrustModel<Order> {
-    private static final int SIZE = 100;
+    private static final int SIZE = 10;
 
-    private boolean[][][] pairwise = new boolean[SIZE][SIZE][SIZE];
-    private boolean[][][] closures = new boolean[SIZE][SIZE][SIZE];
-    private double[][] opinions = new double[SIZE][SIZE];
+    // opinions
+    private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
+    private boolean[][][] opClosures = new boolean[SIZE][SIZE][SIZE];
+    private double[][] rcvOpinions = new double[SIZE][SIZE];
+
+    // experiences
+    private int[] xpCount = new int[SIZE];
+    private double[] xpSum = new double[SIZE];
+    private boolean[][] xpPairwise = new boolean[SIZE][SIZE];
+    private boolean[][] xpClosure = new boolean[SIZE][SIZE];
 
     @Override
     public void initialize(Object... objects) {
@@ -33,29 +40,68 @@ public class Schulze extends AbstractTrustModel<Order> {
     }
 
     @Override
+    public void calculateTrust() {
+    }
+
+    @Override
+    public void processExperiences(List<Experience> list) {
+        for (Experience experience : list) {
+            xpSum[experience.agent] += experience.outcome;
+            xpCount[experience.agent] += 1;
+        }
+
+        // clear all pairwise experience comparisons
+        for (int agent1 = 0; agent1 < xpPairwise.length; agent1++) {
+            for (int agent2 = 0; agent2 < xpPairwise.length; agent2++) {
+                xpPairwise[agent1][agent2] = false;
+            }
+        }
+
+        // fill the array of pairwise experience comparisons
+        for (int agent1 = 0; agent1 < xpPairwise.length; agent1++) {
+            for (int agent2 = 0; agent2 < xpPairwise.length; agent2++) {
+                xpPairwise[agent1][agent2] = xpSum[agent1] / xpCount[agent1] > xpSum[agent2] / xpCount[agent2];
+            }
+        }
+
+        // compute closure over pairwise experience comparisons
+        xpClosure = closure(xpPairwise);
+    }
+
+    @Override
     public void processOpinions(List<Opinion> list) {
-        for (int i = 0; i < opinions.length; i++) {
-            for (int j = 0; j < opinions.length; j++) {
-                opinions[i][j] = 0d;
+        // clear all absolute opinions from previous ticks
+        for (int i = 0; i < rcvOpinions.length; i++) {
+            for (int j = 0; j < rcvOpinions.length; j++) {
+                rcvOpinions[i][j] = 0d;
             }
         }
-
-        for (int reporter = 0; reporter < pairwise.length; reporter++) {
-            for (int agent1 = 0; agent1 < pairwise.length; agent1++) {
-                for (int agent2 = 0; agent2 < pairwise.length; agent2++) {
-                    pairwise[reporter][agent1][agent2] = false;
+        // clear all pairwise comparisons from previous ticks
+        for (int reporter = 0; reporter < opPairwise.length; reporter++) {
+            for (int agent1 = 0; agent1 < opPairwise.length; agent1++) {
+                for (int agent2 = 0; agent2 < opPairwise.length; agent2++) {
+                    opPairwise[reporter][agent1][agent2] = false;
                 }
             }
         }
 
-        list.forEach(op -> opinions[op.agent1][op.agent2] = op.internalTrustDegree);
+        // fill the array of absolute opinions using the received opinions
+        for (Opinion opinion : list) {
+            rcvOpinions[opinion.agent1][opinion.agent2] = opinion.internalTrustDegree;
+        }
 
-        for (int reporter = 0; reporter < pairwise.length; reporter++) {
-            for (int agent1 = 0; agent1 < pairwise.length; agent1++) {
-                for (int agent2 = 0; agent2 < pairwise.length; agent2++) {
-                    pairwise[reporter][agent1][agent2] = opinions[reporter][agent1] > opinions[reporter][agent2];
+        // fill the array of pairwise opinion comparisons
+        for (int reporter = 0; reporter < opPairwise.length; reporter++) {
+            for (int agent1 = 0; agent1 < opPairwise.length; agent1++) {
+                for (int agent2 = 0; agent2 < opPairwise.length; agent2++) {
+                    opPairwise[reporter][agent1][agent2] = rcvOpinions[reporter][agent1] > rcvOpinions[reporter][agent2];
                 }
             }
+        }
+
+        // compute closures over all pairwise comparisons
+        for (int reporter = 0; reporter < opPairwise.length; reporter++) {
+            opClosures[reporter] = closure(opPairwise[reporter]);
         }
     }
 
@@ -81,14 +127,6 @@ public class Schulze extends AbstractTrustModel<Order> {
         }
 
         return closure;
-    }
-
-    @Override
-    public void processExperiences(List<Experience> list) {
-    }
-
-    @Override
-    public void calculateTrust() {
     }
 
     /**
@@ -145,13 +183,8 @@ public class Schulze extends AbstractTrustModel<Order> {
 
     @Override
     public Map<Integer, Order> getTrust(int service) {
-        // compute closures over all opinions
-        for (int reporter = 0; reporter < pairwise.length; reporter++) {
-            closures[reporter] = closure(pairwise[reporter]);
-        }
-
-        // sum all closures into preferences
-        final int[][] preferences = computePreferences(closures);
+        // sum closures into preferences
+        final int[][] preferences = computePreferences(opClosures);
 
         // find the strongest paths
         final int[][] paths = findStrongestPaths(preferences);
