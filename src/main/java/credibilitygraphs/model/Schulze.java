@@ -162,8 +162,8 @@ public class Schulze extends AbstractTrustModel<Order> {
      * @param closures an array of closure matrices
      * @return component-wise sum of all closure matrices
      */
-    private int[][] computePreferences(boolean[][][] closures) {
-        final int[][] preferences = new int[SIZE][SIZE];
+    private double[][] computePreferences(boolean[][][] closures) {
+        final double[][] preferences = new double[SIZE][SIZE];
 
         for (int reporter = 0; reporter < closures.length; reporter++) {
             for (int agent1 = 0; agent1 < closures.length; agent1++) {
@@ -185,8 +185,8 @@ public class Schulze extends AbstractTrustModel<Order> {
      * @param preferences a matrix of preferences between all pairs of agents
      * @return a matrix of strongest paths between all pairs of agents
      */
-    private int[][] findStrongestPaths(int[][] preferences) {
-        final int[][] paths = new int[SIZE][SIZE];
+    private double[][] findStrongestPaths(double[][] preferences) {
+        final double[][] paths = new double[SIZE][SIZE];
 
         for (int i = 0; i < preferences.length; i++) {
             System.arraycopy(preferences[i], 0, paths[i], 0, paths[0].length);
@@ -214,10 +214,10 @@ public class Schulze extends AbstractTrustModel<Order> {
     @Override
     public Map<Integer, Order> getTrust(int service) {
         // sum closures into preferences
-        final int[][] preferences = computePreferences(opClosures);
+        final double[][] preferences = computePreferences(opClosures);
 
         // find the strongest paths
-        final int[][] paths = findStrongestPaths(preferences);
+        final double[][] paths = findStrongestPaths(preferences);
 
         final Map<Integer, Order> order = new HashMap<>();
         for (int agent = 0; agent < SIZE; agent++) {
@@ -229,16 +229,16 @@ public class Schulze extends AbstractTrustModel<Order> {
 }
 
 class Order implements Comparable<Order> {
-    private final int[][] paths;
+    private final double[][] paths;
     private final int agent;
 
-    Order(int agent, int[][] paths) {
+    Order(int agent, double[][] paths) {
         this.agent = agent;
         this.paths = paths;
     }
 
     @Override
     public int compareTo(@NotNull Order that) {
-        return Integer.compare(paths[this.agent][that.agent], paths[that.agent][this.agent]);
+        return Double.compare(paths[this.agent][that.agent], paths[that.agent][this.agent]);
     }
 }
