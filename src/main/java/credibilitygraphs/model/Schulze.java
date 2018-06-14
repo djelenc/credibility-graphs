@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 /* TODO:
-   - Vkljuci izkusnje v koncni izracun
+   - Vkljuci razsiritev arrayev
    - Vkljuci dejavnik odstotka preverjenih mnenje -- kaksen % prejetih mnenj se je dalo preveriti
    - Vkljuci kredibilnost
    - Vkljuci druzbeno povezanost
@@ -216,6 +216,10 @@ public class Schulze extends AbstractTrustModel<Order> {
         // sum closures into preferences
         final double[][] preferences = computePreferences(opClosures);
 
+        // adds experience counts to the matrix of preferences
+        // XXX: It seems to not do much
+        addExperiences(preferences, xpClosure, xpCount);
+
         // find the strongest paths
         final double[][] paths = findStrongestPaths(preferences);
 
@@ -225,6 +229,65 @@ public class Schulze extends AbstractTrustModel<Order> {
         }
 
         return order;
+    }
+
+    /**
+     * Adds the number of experiences to given matrix of opinion preferences
+     *
+     * @param preferences matrix of opinion preferences
+     * @param xpClosure   matrix of closures as given by experiences
+     * @param xpCount     an array of experience counts
+     */
+    private void addExperiences(double[][] preferences, boolean[][] xpClosure, int[] xpCount) {
+        for (int source = 0; source < preferences.length; source++) {
+            for (int target = 0; target < preferences.length; target++) {
+                if (source != target && xpClosure[source][target]) {
+                    preferences[source][target] += Math.min(xpCount[source], xpCount[target]);
+                }
+            }
+        }
+    }
+
+    private void printMatrix(double[][] matrix) {
+        final StringBuilder sb = new StringBuilder();
+
+        for (int source = 0; source < matrix.length; source++) {
+            sb.append("[");
+            for (int target = 0; target < matrix.length; target++) {
+                sb.append(String.format("%.2f", matrix[source][target]));
+
+                if (target == matrix.length - 1) {
+                    sb.append("]");
+                } else {
+                    sb.append(", ");
+                }
+
+            }
+            sb.append(System.lineSeparator());
+        }
+
+        System.out.println(sb.toString());
+    }
+
+    private void printMatrix(boolean[][] matrix) {
+        final StringBuilder sb = new StringBuilder();
+
+        for (int source = 0; source < matrix.length; source++) {
+            sb.append("[");
+            for (int target = 0; target < matrix.length; target++) {
+                sb.append(matrix[source][target] ? 1 : 0);
+
+                if (target == matrix.length - 1) {
+                    sb.append("]");
+                } else {
+                    sb.append(", ");
+                }
+
+            }
+            sb.append(System.lineSeparator());
+        }
+
+        System.out.println(sb.toString());
     }
 }
 
