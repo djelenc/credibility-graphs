@@ -10,14 +10,14 @@ import java.util.List;
 import java.util.Map;
 
 /* TODO:
-   - Vkljuci razsiritev arrayev
-   - Vkljuci dejavnik odstotka preverjenih mnenje -- kaksen % prejetih mnenj se je dalo preveriti
+   - Vkljuci dejavnik odstotka preverjenih mnenj -- kaksen % prejetih mnenj se je dalo preveriti
+       Ideja: vec mnenj ko se da preveriti, bolj zaupamo njegovim nepreverjenjim mnenjem
    - Vkljuci kredibilnost
    - Vkljuci druzbeno povezanost
    - Vkljuci casovno diskontiranje
  */
 public class Schulze extends AbstractTrustModel<Order> {
-    private static final int SIZE = 100;
+    private static final int SIZE = 50;
 
     // opinions
     private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
@@ -46,6 +46,52 @@ public class Schulze extends AbstractTrustModel<Order> {
 
     @Override
     public void setAgents(List<Integer> list) {
+        final int currentSize = xpSum.length;
+        final int limit = list.stream().max(Integer::compareTo).orElse(SIZE) + 1;
+
+        if (limit <= currentSize) {
+            return;
+        }
+
+        final boolean[][][] _opPairwise = new boolean[limit][limit][limit];
+        final boolean[][][] _opClosures = new boolean[limit][limit][limit];
+
+        final double[][] _rcvOpinions = new double[limit][limit];
+        final boolean[][] _xpPairwise = new boolean[limit][limit];
+        final boolean[][] _xpClosure = new boolean[limit][limit];
+
+        for (int i = 0; i < currentSize; i++) {
+            for (int j = 0; j < currentSize; j++) {
+                System.arraycopy(opPairwise[i][j], 0, _opPairwise[i][j], 0, currentSize);
+                System.arraycopy(opClosures[i][j], 0, _opClosures[i][j], 0, currentSize);
+            }
+            System.arraycopy(rcvOpinions[i], 0, _rcvOpinions[i], 0, currentSize);
+            System.arraycopy(xpPairwise[i], 0, _xpPairwise[i], 0, currentSize);
+            System.arraycopy(xpClosure[i], 0, _xpClosure[i], 0, currentSize);
+        }
+
+        opPairwise = _opPairwise;
+        opClosures = _opClosures;
+
+        rcvOpinions = _rcvOpinions;
+        xpPairwise = _xpPairwise;
+        xpClosure = _xpClosure;
+
+        final int[] _xpCount = new int[limit];
+        System.arraycopy(xpCount, 0, _xpCount, 0, currentSize);
+        xpCount = _xpCount;
+
+        final double[] _xpSum = new double[limit];
+        System.arraycopy(xpSum, 0, _xpSum, 0, currentSize);
+        xpSum = _xpSum;
+
+        final int[] _paRight = new int[limit];
+        System.arraycopy(paRight, 0, _paRight, 0, currentSize);
+        paRight = _paRight;
+
+        final int[] _paWrong = new int[limit];
+        System.arraycopy(paWrong, 0, _paWrong, 0, currentSize);
+        paWrong = _paWrong;
     }
 
     @Override
@@ -163,7 +209,7 @@ public class Schulze extends AbstractTrustModel<Order> {
      * @return component-wise sum of all closure matrices
      */
     private double[][] computePreferences(boolean[][][] closures) {
-        final double[][] preferences = new double[SIZE][SIZE];
+        final double[][] preferences = new double[closures.length][closures.length];
 
         for (int reporter = 0; reporter < closures.length; reporter++) {
             for (int agent1 = 0; agent1 < closures.length; agent1++) {
@@ -186,7 +232,7 @@ public class Schulze extends AbstractTrustModel<Order> {
      * @return a matrix of strongest paths between all pairs of agents
      */
     private double[][] findStrongestPaths(double[][] preferences) {
-        final double[][] paths = new double[SIZE][SIZE];
+        final double[][] paths = new double[preferences.length][preferences.length];
 
         for (int i = 0; i < preferences.length; i++) {
             System.arraycopy(preferences[i], 0, paths[i], 0, paths[0].length);
@@ -224,7 +270,7 @@ public class Schulze extends AbstractTrustModel<Order> {
         final double[][] paths = findStrongestPaths(preferences);
 
         final Map<Integer, Order> order = new HashMap<>();
-        for (int agent = 0; agent < SIZE; agent++) {
+        for (int agent = 0; agent < paths.length; agent++) {
             order.put(agent, new Order(agent, paths));
         }
 
