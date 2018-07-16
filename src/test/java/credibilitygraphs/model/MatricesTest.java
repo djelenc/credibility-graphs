@@ -68,7 +68,7 @@ public class MatricesTest {
         final float[][] closure = new float[adjacency.length][adjacency.length];
         Matrices.closure(adjacency, closure);
 
-        Matrices.contract(adjacency, 1, 3, closure);
+        Matrices.contract(adjacency, 0, 4, closure);
 
         final float[][] expectedAdjacency = new float[][]{
                 {0, 2, 0, 0, 0, 0},
