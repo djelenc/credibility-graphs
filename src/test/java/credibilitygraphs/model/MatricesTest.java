@@ -56,7 +56,7 @@ public class MatricesTest {
     }
 
     @Test
-    public void contraction() {
+    public void contraction1() {
         final float[][] adjacency = new float[][]{
                 {0, 2, 0, 0, 0, 0},
                 {0, 0, 1, 2, 0, 1.25f},
@@ -78,7 +78,36 @@ public class MatricesTest {
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0}
         };
+        final float[][] expectedClosure = new float[][]{
+                {0, 2, 0, 2, 0, 1.25f},
+                {0, 0, 0, 2, 0, 1.25f},
+                {0, 0, 0, 0, 2, 0},
+                {0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0}
+        };
 
         Assert.assertArrayEquals(expectedAdjacency, adjacency);
+        Assert.assertArrayEquals(expectedClosure, closure);
+    }
+
+    @Test
+    public void contraction2() {
+        final float[][] adjacency = new float[][]{
+                {0, 1, 0},
+                {0, 0, 1},
+                {0, 0, 0},
+        };
+        final float[][] closure = new float[adjacency.length][adjacency.length];
+        Matrices.closure(adjacency, closure);
+
+        Matrices.contract(adjacency, 0, 2, closure);
+
+        // both matrices should contain only zeros
+        final float[][] expectedAdjacency = new float[adjacency.length][adjacency.length];
+        final float[][] expectedClosure = new float[adjacency.length][adjacency.length];
+
+        Assert.assertArrayEquals(expectedAdjacency, adjacency);
+        Assert.assertArrayEquals(expectedClosure, closure);
     }
 }
