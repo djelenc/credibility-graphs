@@ -59,4 +59,24 @@ public class Matrices {
         // It should be done dynamically in O(n^2). Not sure how to implement it just yet.
         closure(adjacency, closure);
     }
+
+    static void printMatrix(float[][] matrix) {
+        final StringBuilder sb = new StringBuilder();
+        for (int source = 0; source < matrix.length; source++) {
+            sb.append("[");
+            for (int target = 0; target < matrix.length; target++) {
+                sb.append(String.format("%.2f", matrix[source][target]));
+
+                if (target == matrix.length - 1) {
+                    sb.append("]");
+                } else {
+                    sb.append(", ");
+                }
+
+            }
+            sb.append(System.lineSeparator());
+        }
+
+        System.out.println(sb.toString());
+    }
 }
