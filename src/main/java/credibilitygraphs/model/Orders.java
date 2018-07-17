@@ -12,8 +12,8 @@ import java.util.Map;
 public class Orders extends AbstractTrustModel<Order> {
     private static final int SIZE = 100;
 
-    private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
-    private boolean[][][] opClosures = new boolean[SIZE][SIZE][SIZE];
+    private double[][][] opPairwise = new double[SIZE][SIZE][SIZE];
+    private double[][][] opClosures = new double[SIZE][SIZE][SIZE];
     private double[][] rcvOpinions = new double[SIZE][SIZE];
 
     @Override
@@ -82,7 +82,7 @@ public class Orders extends AbstractTrustModel<Order> {
     @Override
     public void processOpinions(List<Opinion> list) {
         // clear all absolute opinions from previous ticks
-        /*for (int i = 0; i < rcvOpinions.length; i++) {
+        for (int i = 0; i < rcvOpinions.length; i++) {
             for (int j = 0; j < rcvOpinions.length; j++) {
                 rcvOpinions[i][j] = 0d;
             }
@@ -91,7 +91,7 @@ public class Orders extends AbstractTrustModel<Order> {
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
             for (int agent1 = 0; agent1 < opPairwise.length; agent1++) {
                 for (int agent2 = 0; agent2 < opPairwise.length; agent2++) {
-                    opPairwise[reporter][agent1][agent2] = false;
+                    opPairwise[reporter][agent1][agent2] = 0d;
                 }
             }
         }
@@ -105,15 +105,15 @@ public class Orders extends AbstractTrustModel<Order> {
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
             for (int agent1 = 0; agent1 < opPairwise.length; agent1++) {
                 for (int agent2 = 0; agent2 < opPairwise.length; agent2++) {
-                    opPairwise[reporter][agent1][agent2] = rcvOpinions[reporter][agent1] > rcvOpinions[reporter][agent2];
+                    opPairwise[reporter][agent1][agent2] = rcvOpinions[reporter][agent1] < rcvOpinions[reporter][agent2] ? 1d : 0d ;
                 }
             }
         }
 
         // compute closures over all pairwise comparisons
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
-            opClosures[reporter] = closure(opPairwise[reporter]);
-        }*/
+            Matrices.closure(opPairwise[reporter], opClosures[reporter]);
+        }
     }
 
     @Override
@@ -133,7 +133,13 @@ public class Orders extends AbstractTrustModel<Order> {
             order.put(agent, new Order(agent, paths));
         }
 
-        return order;*/
+        return order;
+        for (int reporter = 0; reporter < SIZE; reporter++) {
+            System.out.println("REPORTER " + reporter);
+            Matrices.printMatrix(opPairwise[reporter]);
+            Matrices.printMatrix(opClosures[reporter]);
+        }*/
+
         return new HashMap<>();
     }
 }
