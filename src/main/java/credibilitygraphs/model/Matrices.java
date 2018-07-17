@@ -4,7 +4,7 @@ public class Matrices {
     /**
      * Computes transitive closure over given adjacency matrix and stores the result into closure parameter.
      */
-    static void closure(float[][] adjacency, float[][] closure) {
+    static void closure(double[][] adjacency, double[][] closure) {
         for (int i = 0; i < adjacency.length; i++) {
             System.arraycopy(adjacency[i], 0, closure[i], 0, adjacency[0].length);
         }
@@ -22,7 +22,7 @@ public class Matrices {
      * Expands given adjacency matrix with edge between src and tgt of value val.
      * Dynamically updates the corresponding closure matrix.
      */
-    static void expand(float[][] adjacency, int src, int tgt, float val, float[][] closure) {
+    static void expand(double[][] adjacency, int src, int tgt, double val, double[][] closure) {
         adjacency[src][tgt] = val;
 
         for (int i = 0; i < closure.length; i++) {
@@ -41,8 +41,8 @@ public class Matrices {
     /**
      * Removes all paths from from src to target. The adjacency and the closure matrices are dynamically updated.
      */
-    static void contract(float[][] adjacency, int src, int tgt, float[][] closure) {
-        final float support = closure[src][tgt];
+    static void contract(double[][] adjacency, int src, int tgt, double[][] closure) {
+        final double support = closure[src][tgt];
 
         for (int i = 0; i < closure.length; i++) {
             for (int j = 0; j < closure.length; j++) {
@@ -60,7 +60,7 @@ public class Matrices {
         closure(adjacency, closure);
     }
 
-    static void printMatrix(float[][] matrix) {
+    static void printMatrix(double[][] matrix) {
         final StringBuilder sb = new StringBuilder();
         for (int source = 0; source < matrix.length; source++) {
             sb.append("[");

@@ -10,7 +10,11 @@ import java.util.Map;
 
 
 public class Orders extends AbstractTrustModel<Order> {
-    private static final int SIZE = 50;
+    private static final int SIZE = 100;
+
+    private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
+    private boolean[][][] opClosures = new boolean[SIZE][SIZE][SIZE];
+    private double[][] rcvOpinions = new double[SIZE][SIZE];
 
     @Override
     public void initialize(Object... objects) {
