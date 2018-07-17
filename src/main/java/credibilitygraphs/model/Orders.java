@@ -3,13 +3,12 @@ package credibilitygraphs.model;
 import atb.interfaces.Experience;
 import atb.interfaces.Opinion;
 import atb.trustmodel.AbstractTrustModel;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
-public class Orders extends AbstractTrustModel<Order> {
+public class Orders extends AbstractTrustModel<Orders.Rank> {
     private static final int SIZE = 100;
 
     private double[][][] opPairwise = new double[SIZE][SIZE][SIZE];
@@ -38,45 +37,7 @@ public class Orders extends AbstractTrustModel<Order> {
 
     @Override
     public void processExperiences(List<Experience> list) {
-        /*for (Experience experience : list) {
-            xpSum[experience.agent] += experience.outcome;
-            xpCount[experience.agent] += 1;
-        }
-
-        // clear all pairwise experience comparisons
-        for (int agent1 = 0; agent1 < xpPairwise.length; agent1++) {
-            for (int agent2 = 0; agent2 < xpPairwise.length; agent2++) {
-                xpPairwise[agent1][agent2] = false;
-            }
-        }
-
-        // fill the array of pairwise experience comparisons
-        for (int agent1 = 0; agent1 < xpPairwise.length; agent1++) {
-            for (int agent2 = 0; agent2 < xpPairwise.length; agent2++) {
-                xpPairwise[agent1][agent2] = xpSum[agent1] / xpCount[agent1] > xpSum[agent2] / xpCount[agent2];
-            }
-        }
-
-        // compute closure over pairwise experience comparisons
-        xpClosure = closure(xpPairwise);
-
-        for (Experience ex : list) {
-            final int target = ex.agent;
-
-            for (int agent = 0; agent < opClosures.length; agent++) {
-                if (xpCount[agent] > 0) { // do we have an experience to compare this against
-                    final boolean value = xpClosure[agent][target];
-
-                    for (int reporter = 0; reporter < opClosures.length; reporter++) {
-                        if (value == opClosures[reporter][agent][target]) {
-                            paRight[reporter] += 1;
-                        } else {
-                            paWrong[reporter] += 1;
-                        }
-                    }
-                }
-            }
-        }*/
+        // TODO
     }
 
     @Override
@@ -103,9 +64,9 @@ public class Orders extends AbstractTrustModel<Order> {
 
         // fill the array of pairwise opinion comparisons
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
-            for (int agent1 = 0; agent1 < opPairwise.length; agent1++) {
-                for (int agent2 = 0; agent2 < opPairwise.length; agent2++) {
-                    opPairwise[reporter][agent1][agent2] = rcvOpinions[reporter][agent1] < rcvOpinions[reporter][agent2] ? 1d : 0d ;
+            for (int source = 0; source < opPairwise.length; source++) {
+                for (int target = 0; target < opPairwise.length; target++) {
+                    opPairwise[reporter][source][target] = rcvOpinions[reporter][source] < rcvOpinions[reporter][target] ? 1 : 0;
                 }
             }
         }
@@ -117,29 +78,94 @@ public class Orders extends AbstractTrustModel<Order> {
     }
 
     @Override
-    public Map<Integer, Order> getTrust(int service) {
-        // sum closures into preferences
-        /*final double[][] preferences = computePreferences(opClosures);
+    public Map<Integer, Orders.Rank> getTrust(int service) {
+        final List<Summary> statements = new ArrayList<>();
 
-        // adds experience counts to the matrix of preferences
-        // XXX: It seems to not do much
-        addExperiences(preferences, xpClosure, xpCount);
+        for (int source = 0; source < opClosures.length; source++) {
+            for (int target = 0; target < opClosures.length; target++) {
+                if (source == target) {
+                    continue;
+                }
 
-        // find the strongest paths
-        final double[][] paths = findStrongestPaths(preferences);
-
-        final Map<Integer, Order> order = new HashMap<>();
-        for (int agent = 0; agent < paths.length; agent++) {
-            order.put(agent, new Order(agent, paths));
+                // compute support for source < target
+                double support = 0;
+                for (int reporter = 0; reporter < opClosures.length; reporter++) {
+                    support += opClosures[reporter][source][target];
+                }
+                statements.add(new Summary(source, target, support));
+            }
         }
 
-        return order;
-        for (int reporter = 0; reporter < SIZE; reporter++) {
-            System.out.println("REPORTER " + reporter);
-            Matrices.printMatrix(opPairwise[reporter]);
-            Matrices.printMatrix(opClosures[reporter]);
-        }*/
+        // sort statements by support
+        statements.sort(Comparator.comparingDouble(o -> -o.support));
 
-        return new HashMap<>();
+        // create matrices
+        final double[][] adjacency = new double[opClosures.length][opClosures.length];
+        final double[][] closure = new double[opClosures.length][opClosures.length];
+        Matrices.closure(adjacency, closure);
+
+        int expansion = 0, revision = 0, skip = 0;
+
+        // perform non-prioritized revision in the order of most supported statements
+        for (Summary s : statements) {
+            if (closure[s.target][s.source] == 0d) {
+                // if there is no contradiction, expand the KB with this statement
+                Matrices.expand(adjacency, s.source, s.target, s.support, closure);
+                expansion++;
+            } else if (closure[s.target][s.source] < s.support) {
+                // if there is a contradiction, but the support for the new statement
+                // is stronger than existing, contract the opposite statement from the KB,
+                // and expand it with new one
+                Matrices.contract(adjacency, s.target, s.source, closure);
+                Matrices.expand(adjacency, s.source, s.target, s.support, closure);
+                revision++;
+            } else {
+                // else, skip new data
+                skip++;
+            }
+        }
+
+        System.out.printf("E = %d, R = %d, S = %d%n", expansion, revision, skip);
+
+        final Map<Integer, Orders.Rank> order = new HashMap<>();
+        for (int agent = 0; agent < adjacency.length; agent++) {
+            order.put(agent, new Orders.Rank(agent, adjacency));
+        }
+
+        // Matrices.printMatrix(closure);
+        // System.out.println();
+
+        return order;
+    }
+
+    private static class Summary {
+        final int source, target;
+        final double support;
+
+        private Summary(int source, int target, double support) {
+            this.source = source;
+            this.target = target;
+            this.support = support;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%d < %d (%.2f)", source, target, support);
+        }
+    }
+
+    static class Rank implements Comparable<Rank> {
+        private final double[][] paths;
+        private final int agent;
+
+        Rank(int agent, double[][] paths) {
+            this.agent = agent;
+            this.paths = paths;
+        }
+
+        @Override
+        public int compareTo(@NotNull Rank that) {
+            return Double.compare(paths[that.agent][this.agent], paths[this.agent][that.agent]);
+        }
     }
 }

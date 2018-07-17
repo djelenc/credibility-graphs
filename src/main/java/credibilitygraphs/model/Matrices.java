@@ -23,7 +23,8 @@ public class Matrices {
      * Dynamically updates the corresponding closure matrix.
      */
     static void expand(double[][] adjacency, int src, int tgt, double val, double[][] closure) {
-        adjacency[src][tgt] = val;
+        // OLD: adjacency[src][tgt] = val;
+        adjacency[src][tgt] += val;
 
         for (int i = 0; i < closure.length; i++) {
             for (int j = 0; j < closure.length; j++) {
