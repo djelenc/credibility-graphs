@@ -19,10 +19,34 @@ public class Matrices {
     }
 
     /**
+     * Computes transitive closure over given adjacency matrix and stores the result into closure parameter.
+     */
+    static void closure(boolean[][] adjacency, boolean[][] closure) {
+        for (int i = 0; i < adjacency.length; i++) {
+            System.arraycopy(adjacency[i], 0, closure[i], 0, adjacency[0].length);
+        }
+
+        for (int k = 0; k < adjacency.length; k++) {
+            for (int i = 0; i < adjacency.length; i++) {
+                for (int j = 0; j < adjacency.length; j++) {
+                    closure[i][j] = closure[i][j] || (closure[i][k] && closure[k][j]);
+                }
+            }
+        }
+    }
+
+    /**
      * Expands given adjacency matrix with edge between src and tgt of value val.
      * Dynamically updates the corresponding closure matrix.
      */
     static void expand(double[][] adjacency, int src, int tgt, double val, double[][] closure) {
+        if (closure[tgt][src] > 0) {
+            // skip the KB supports the contrary
+            System.err.printf("Aborted expansion [%d < %d, %.2f], because existing KB contains [%d < %d, %.2f]",
+                    src, tgt, val, tgt, src, closure[tgt][src]);
+            return;
+        }
+
         // OLD: adjacency[src][tgt] = val;
         adjacency[src][tgt] += val;
 

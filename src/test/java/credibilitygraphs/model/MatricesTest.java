@@ -30,7 +30,7 @@ public class MatricesTest {
     }
 
     @Test
-    public void expansion() {
+    public void expansionOK() {
         final double[][] adjacency = new double[][]{
                 {0, 2, 0, 0, 0},
                 {0, 0, 1, 0, 0},
@@ -56,7 +56,27 @@ public class MatricesTest {
     }
 
     @Test
-    public void contraction1() {
+    public void expansionAborted() {
+        final double[][] adjacency = new double[][]{
+                {0, 2, 0, 0, 0},
+                {0, 0, 1, 0, 0},
+                {0, 0, 0, 2, 0},
+                {0, 0, 0, 0, 2},
+                {0, 0, 0, 0, 0}
+        };
+        final double[][] closure = new double[adjacency.length][adjacency.length];
+        Matrices.closure(adjacency, closure);
+
+        final double[][] expectedClosure = new double[adjacency.length][adjacency.length];
+        Matrices.closure(adjacency, expectedClosure);
+
+        Matrices.expand(adjacency, 1, 0, 3d, closure);
+
+        Assert.assertArrayEquals(expectedClosure, closure);
+    }
+
+    @Test
+    public void contractionOK() {
         final double[][] adjacency = new double[][]{
                 {0, 2, 0, 0, 0, 0},
                 {0, 0, 1, 2, 0, 1.25d},
@@ -92,7 +112,7 @@ public class MatricesTest {
     }
 
     @Test
-    public void contraction2() {
+    public void contractionRemoveAllEdges() {
         final double[][] adjacency = new double[][]{
                 {0, 1, 0},
                 {0, 0, 1},

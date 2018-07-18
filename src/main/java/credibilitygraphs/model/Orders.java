@@ -11,8 +11,8 @@ import java.util.*;
 public class Orders extends AbstractTrustModel<Orders.Rank> {
     private static final int SIZE = 100;
 
-    private double[][][] opPairwise = new double[SIZE][SIZE][SIZE];
-    private double[][][] opClosures = new double[SIZE][SIZE][SIZE];
+    private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
+    private boolean[][][] opClosures = new boolean[SIZE][SIZE][SIZE];
     private double[][] rcvOpinions = new double[SIZE][SIZE];
 
     @Override
@@ -52,7 +52,7 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
             for (int agent1 = 0; agent1 < opPairwise.length; agent1++) {
                 for (int agent2 = 0; agent2 < opPairwise.length; agent2++) {
-                    opPairwise[reporter][agent1][agent2] = 0d;
+                    opPairwise[reporter][agent1][agent2] = false;
                 }
             }
         }
@@ -66,7 +66,7 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
             for (int source = 0; source < opPairwise.length; source++) {
                 for (int target = 0; target < opPairwise.length; target++) {
-                    opPairwise[reporter][source][target] = rcvOpinions[reporter][source] < rcvOpinions[reporter][target] ? 1 : 0;
+                    opPairwise[reporter][source][target] = rcvOpinions[reporter][source] < rcvOpinions[reporter][target];
                 }
             }
         }
@@ -79,7 +79,7 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
 
     @Override
     public Map<Integer, Orders.Rank> getTrust(int service) {
-        final List<Summary> statements = new ArrayList<>();
+        final List<Statement> statements = new ArrayList<>();
 
         for (int source = 0; source < opClosures.length; source++) {
             for (int target = 0; target < opClosures.length; target++) {
@@ -90,9 +90,9 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
                 // compute support for source < target
                 double support = 0;
                 for (int reporter = 0; reporter < opClosures.length; reporter++) {
-                    support += opClosures[reporter][source][target];
+                    support += opClosures[reporter][source][target] ? 1 : 0;
                 }
-                statements.add(new Summary(source, target, support));
+                statements.add(new Statement(source, target, support));
             }
         }
 
@@ -107,15 +107,15 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
         int expansion = 0, revision = 0, skip = 0;
 
         // perform non-prioritized revision in the order of most supported statements
-        for (Summary s : statements) {
+        for (Statement s : statements) {
             if (closure[s.target][s.source] == 0d) {
                 // if there is no contradiction, expand the KB with this statement
                 Matrices.expand(adjacency, s.source, s.target, s.support, closure);
                 expansion++;
             } else if (closure[s.target][s.source] < s.support) {
                 // if there is a contradiction, but the support for the new statement
-                // is stronger than existing, contract the opposite statement from the KB,
-                // and expand it with new one
+                // is stronger, contract the opposite statement from the KB, and
+                // expand it with new statement
                 Matrices.contract(adjacency, s.target, s.source, closure);
                 Matrices.expand(adjacency, s.source, s.target, s.support, closure);
                 revision++;
@@ -138,11 +138,11 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
         return order;
     }
 
-    private static class Summary {
+    private static class Statement {
         final int source, target;
         final double support;
 
-        private Summary(int source, int target, double support) {
+        private Statement(int source, int target, double support) {
             this.source = source;
             this.target = target;
             this.support = support;
@@ -150,22 +150,22 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
 
         @Override
         public String toString() {
-            return String.format("%d < %d (%.2f)", source, target, support);
+            return String.format("[%d < %d, %.2f]", source, target, support);
         }
     }
 
     static class Rank implements Comparable<Rank> {
-        private final double[][] paths;
+        private final double[][] matrix;
         private final int agent;
 
-        Rank(int agent, double[][] paths) {
+        private Rank(int agent, double[][] matrix) {
             this.agent = agent;
-            this.paths = paths;
+            this.matrix = matrix;
         }
 
         @Override
         public int compareTo(@NotNull Rank that) {
-            return Double.compare(paths[that.agent][this.agent], paths[this.agent][that.agent]);
+            return Double.compare(matrix[that.agent][this.agent], matrix[this.agent][that.agent]);
         }
     }
 }
