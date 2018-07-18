@@ -3,12 +3,11 @@ package credibilitygraphs.model;
 import atb.interfaces.Experience;
 import atb.interfaces.Opinion;
 import atb.trustmodel.AbstractTrustModel;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 
-public class Orders extends AbstractTrustModel<Orders.Rank> {
+public class Orders extends AbstractTrustModel<PairwiseOrder> {
     private static final int SIZE = 10;
 
     // opinions
@@ -122,7 +121,7 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
     }
 
     @Override
-    public Map<Integer, Orders.Rank> getTrust(int service) {
+    public Map<Integer, PairwiseOrder> getTrust(int service) {
         final List<Statement> statements = new ArrayList<>();
 
         for (int source = 0; source < opClosures.length; source++) {
@@ -171,9 +170,9 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
             }
         }
 
-        final Map<Integer, Orders.Rank> order = new HashMap<>();
+        final Map<Integer, PairwiseOrder> order = new HashMap<>();
         for (int agent = 0; agent < adjacency.length; agent++) {
-            order.put(agent, new Orders.Rank(agent, adjacency));
+            order.put(agent, new PairwiseOrder(agent, adjacency));
         }
 
         // debugging
@@ -206,21 +205,6 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
         @Override
         public String toString() {
             return String.format("[%d < %d, %.2f]", source, target, support);
-        }
-    }
-
-    static class Rank implements Comparable<Rank> {
-        private final double[][] matrix;
-        private final int agent;
-
-        private Rank(int agent, double[][] matrix) {
-            this.agent = agent;
-            this.matrix = matrix;
-        }
-
-        @Override
-        public int compareTo(@NotNull Rank that) {
-            return Double.compare(matrix[that.agent][this.agent], matrix[this.agent][that.agent]);
         }
     }
 

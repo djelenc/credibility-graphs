@@ -3,7 +3,6 @@ package credibilitygraphs.model;
 import atb.interfaces.Experience;
 import atb.interfaces.Opinion;
 import atb.trustmodel.AbstractTrustModel;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,7 +15,7 @@ import java.util.Map;
    - Vkljuci druzbeno povezanost
    - Vkljuci casovno diskontiranje
  */
-public class Schulze extends AbstractTrustModel<Schulze.Order> {
+public class Schulze extends AbstractTrustModel<PairwiseOrder> {
     private static final int SIZE = 50;
 
     // opinions
@@ -115,7 +114,7 @@ public class Schulze extends AbstractTrustModel<Schulze.Order> {
         // fill the array of pairwise experience comparisons
         for (int agent1 = 0; agent1 < xpPairwise.length; agent1++) {
             for (int agent2 = 0; agent2 < xpPairwise.length; agent2++) {
-                xpPairwise[agent1][agent2] = xpSum[agent1] / xpCount[agent1] > xpSum[agent2] / xpCount[agent2];
+                xpPairwise[agent1][agent2] = xpSum[agent1] / xpCount[agent1] < xpSum[agent2] / xpCount[agent2];
             }
         }
 
@@ -167,7 +166,7 @@ public class Schulze extends AbstractTrustModel<Schulze.Order> {
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
             for (int agent1 = 0; agent1 < opPairwise.length; agent1++) {
                 for (int agent2 = 0; agent2 < opPairwise.length; agent2++) {
-                    opPairwise[reporter][agent1][agent2] = rcvOpinions[reporter][agent1] > rcvOpinions[reporter][agent2];
+                    opPairwise[reporter][agent1][agent2] = rcvOpinions[reporter][agent1] < rcvOpinions[reporter][agent2];
                 }
             }
         }
@@ -202,7 +201,7 @@ public class Schulze extends AbstractTrustModel<Schulze.Order> {
     }
 
     @Override
-    public Map<Integer, Schulze.Order> getTrust(int service) {
+    public Map<Integer, PairwiseOrder> getTrust(int service) {
         // sum closures into preferences
         final double[][] preferences = computePreferences(opClosures);
 
@@ -210,13 +209,13 @@ public class Schulze extends AbstractTrustModel<Schulze.Order> {
         // XXX: It seems to not do much
         addExperiences(preferences, xpClosure, xpCount);
 
-        // find the strongest paths
+        // find the strongest comparisons
         final double[][] paths = new double[preferences.length][preferences.length];
         Matrices.strongestPaths(preferences, paths);
 
-        final Map<Integer, Order> order = new HashMap<>();
+        final Map<Integer, PairwiseOrder> order = new HashMap<>();
         for (int agent = 0; agent < paths.length; agent++) {
-            order.put(agent, new Order(agent, paths));
+            order.put(agent, new PairwiseOrder(agent, paths));
         }
 
         return order;
@@ -236,21 +235,6 @@ public class Schulze extends AbstractTrustModel<Schulze.Order> {
                     preferences[source][target] += Math.min(xpCount[source], xpCount[target]);
                 }
             }
-        }
-    }
-
-    static class Order implements Comparable<Order> {
-        private final double[][] paths;
-        private final int agent;
-
-        Order(int agent, double[][] paths) {
-            this.agent = agent;
-            this.paths = paths;
-        }
-
-        @Override
-        public int compareTo(@NotNull Order that) {
-            return Double.compare(paths[this.agent][that.agent], paths[that.agent][this.agent]);
         }
     }
 }
