@@ -146,24 +146,24 @@ public class Orders extends AbstractTrustModel<Orders.Rank> {
 
         // create matrices
         final double[][] adjacency = new double[opClosures.length][opClosures.length];
-        final double[][] closure = new double[opClosures.length][opClosures.length];
-        Matrices.closure(adjacency, closure);
+        final double[][] strongestPaths = new double[opClosures.length][opClosures.length];
+        Matrices.strongestPaths(adjacency, strongestPaths);
 
         // debugging
         int expansion = 0, revision = 0, skip = 0;
 
         // perform non-prioritized revision in the order of most supported statements
         for (Statement s : statements) {
-            if (closure[s.target][s.source] == 0d) {
+            if (strongestPaths[s.target][s.source] == 0d) {
                 // if there is no contradiction, expand the KB with this statement
-                Matrices.expand(adjacency, s.source, s.target, s.support, closure);
+                Matrices.expand(adjacency, s.source, s.target, s.support, strongestPaths);
                 expansion++;
-            } else if (closure[s.target][s.source] < s.support) {
+            } else if (strongestPaths[s.target][s.source] < s.support) {
                 // if there is a contradiction, but the support for the new statement
                 // is stronger, contract the opposite statement from the KB, and
                 // expand it with new statement
-                Matrices.contract(adjacency, s.target, s.source, closure);
-                Matrices.expand(adjacency, s.source, s.target, s.support, closure);
+                Matrices.contract(adjacency, s.target, s.source, strongestPaths);
+                Matrices.expand(adjacency, s.source, s.target, s.support, strongestPaths);
                 revision++;
             } else {
                 // else, skip new data

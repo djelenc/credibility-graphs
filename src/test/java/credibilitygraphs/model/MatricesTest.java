@@ -15,7 +15,7 @@ public class MatricesTest {
                 {0, 0, 3, 0, 4},
                 {0, 0, 0, 0, 0}
         };
-        final double[][] closure = new double[adjacency.length][adjacency.length];
+        final double[][] strongestPaths = new double[adjacency.length][adjacency.length];
         final double[][] expected = new double[][]{
                 {0, 2, 2, 2, 2},
                 {0, 0, 3, 0, 2},
@@ -24,9 +24,9 @@ public class MatricesTest {
                 {0, 0, 0, 0, 0}
         };
 
-        Matrices.closure(adjacency, closure);
+        Matrices.strongestPaths(adjacency, strongestPaths);
 
-        Assert.assertArrayEquals(expected, closure);
+        Assert.assertArrayEquals(expected, strongestPaths);
     }
 
     @Test
@@ -38,13 +38,13 @@ public class MatricesTest {
                 {0, 0, 0, 0, 2},
                 {0, 0, 0, 0, 0}
         };
-        final double[][] closure = new double[adjacency.length][adjacency.length];
-        Matrices.closure(adjacency, closure);
+        final double[][] strongestPaths = new double[adjacency.length][adjacency.length];
+        Matrices.strongestPaths(adjacency, strongestPaths);
 
-        Matrices.expand(adjacency, 1, 3, 2d, closure);
+        Matrices.expand(adjacency, 1, 3, 2d, strongestPaths);
 
         Assert.assertEquals(adjacency[1][3], 2d, 0.0001);
-        final double[][] expectedClosure = new double[][]{
+        final double[][] expectedStrongestPaths = new double[][]{
                 {0, 2, 1, 2, 2},
                 {0, 0, 1, 2, 2},
                 {0, 0, 0, 2, 2},
@@ -52,7 +52,7 @@ public class MatricesTest {
                 {0, 0, 0, 0, 0}
         };
 
-        Assert.assertArrayEquals(expectedClosure, closure);
+        Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
 
     @Test
@@ -64,15 +64,15 @@ public class MatricesTest {
                 {0, 0, 0, 0, 2},
                 {0, 0, 0, 0, 0}
         };
-        final double[][] closure = new double[adjacency.length][adjacency.length];
-        Matrices.closure(adjacency, closure);
+        final double[][] strongestPaths = new double[adjacency.length][adjacency.length];
+        Matrices.strongestPaths(adjacency, strongestPaths);
 
-        final double[][] expectedClosure = new double[adjacency.length][adjacency.length];
-        Matrices.closure(adjacency, expectedClosure);
+        final double[][] expectedStrongestPaths = new double[adjacency.length][adjacency.length];
+        Matrices.strongestPaths(adjacency, expectedStrongestPaths);
 
-        Matrices.expand(adjacency, 1, 0, 3d, closure);
+        Matrices.expand(adjacency, 1, 0, 3d, strongestPaths);
 
-        Assert.assertArrayEquals(expectedClosure, closure);
+        Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
 
     @Test
@@ -85,10 +85,10 @@ public class MatricesTest {
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 1, 0, 0, 0}
         };
-        final double[][] closure = new double[adjacency.length][adjacency.length];
-        Matrices.closure(adjacency, closure);
+        final double[][] strongestPaths = new double[adjacency.length][adjacency.length];
+        Matrices.strongestPaths(adjacency, strongestPaths);
 
-        Matrices.contract(adjacency, 0, 4, closure);
+        Matrices.contract(adjacency, 0, 4, strongestPaths);
 
         final double[][] expectedAdjacency = new double[][]{
                 {0, 2, 0, 0, 0, 0},
@@ -98,7 +98,7 @@ public class MatricesTest {
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0}
         };
-        final double[][] expectedClosure = new double[][]{
+        final double[][] expectedStrongestPaths = new double[][]{
                 {0, 2, 0, 2, 0, 1.25d},
                 {0, 0, 0, 2, 0, 1.25d},
                 {0, 0, 0, 0, 2, 0},
@@ -108,7 +108,7 @@ public class MatricesTest {
         };
 
         Assert.assertArrayEquals(expectedAdjacency, adjacency);
-        Assert.assertArrayEquals(expectedClosure, closure);
+        Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
 
     @Test
@@ -118,16 +118,16 @@ public class MatricesTest {
                 {0, 0, 1},
                 {0, 0, 0},
         };
-        final double[][] closure = new double[adjacency.length][adjacency.length];
-        Matrices.closure(adjacency, closure);
+        final double[][] strongestPaths = new double[adjacency.length][adjacency.length];
+        Matrices.strongestPaths(adjacency, strongestPaths);
 
-        Matrices.contract(adjacency, 0, 2, closure);
+        Matrices.contract(adjacency, 0, 2, strongestPaths);
 
         // both matrices should contain only zeros
         final double[][] expectedAdjacency = new double[adjacency.length][adjacency.length];
-        final double[][] expectedClosure = new double[adjacency.length][adjacency.length];
+        final double[][] expectedStrongestPaths = new double[adjacency.length][adjacency.length];
 
         Assert.assertArrayEquals(expectedAdjacency, adjacency);
-        Assert.assertArrayEquals(expectedClosure, closure);
+        Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
 }

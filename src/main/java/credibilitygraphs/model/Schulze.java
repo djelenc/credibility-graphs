@@ -16,7 +16,7 @@ import java.util.Map;
    - Vkljuci druzbeno povezanost
    - Vkljuci casovno diskontiranje
  */
-public class Schulze extends AbstractTrustModel<Order> {
+public class Schulze extends AbstractTrustModel<Schulze.Order> {
     private static final int SIZE = 50;
 
     // opinions
@@ -120,7 +120,7 @@ public class Schulze extends AbstractTrustModel<Order> {
         }
 
         // compute closure over pairwise experience comparisons
-        xpClosure = closure(xpPairwise);
+        Matrices.closure(xpPairwise, xpClosure);
 
         for (Experience ex : list) {
             final int target = ex.agent;
@@ -174,32 +174,8 @@ public class Schulze extends AbstractTrustModel<Order> {
 
         // compute closures over all pairwise comparisons
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
-            opClosures[reporter] = closure(opPairwise[reporter]);
+            Matrices.closure(opPairwise[reporter], opClosures[reporter]);
         }
-    }
-
-    /**
-     * Computes a transitive closure over given adjacency matrix
-     *
-     * @param adjacency matrix
-     * @return transitive closure
-     */
-    private boolean[][] closure(boolean[][] adjacency) {
-        final boolean[][] closure = new boolean[adjacency.length][adjacency.length];
-
-        for (int i = 0; i < adjacency.length; i++) {
-            System.arraycopy(adjacency[i], 0, closure[i], 0, adjacency[0].length);
-        }
-
-        for (int k = 0; k < adjacency.length; k++) {
-            for (int i = 0; i < adjacency.length; i++) {
-                for (int j = 0; j < adjacency.length; j++) {
-                    closure[i][j] = closure[i][j] || (closure[i][k] && closure[k][j]);
-                }
-            }
-        }
-
-        return closure;
     }
 
     /**
@@ -225,40 +201,8 @@ public class Schulze extends AbstractTrustModel<Order> {
         return preferences;
     }
 
-    /**
-     * Finds the strongest paths between each pair of agents using Floyd--Warshall algorithm.
-     *
-     * @param preferences a matrix of preferences between all pairs of agents
-     * @return a matrix of strongest paths between all pairs of agents
-     */
-    private double[][] findStrongestPaths(double[][] preferences) {
-        final double[][] paths = new double[preferences.length][preferences.length];
-
-        for (int i = 0; i < preferences.length; i++) {
-            System.arraycopy(preferences[i], 0, paths[i], 0, paths[0].length);
-        }
-
-        for (int k = 0; k < preferences.length; k++) {
-            for (int i = 0; i < preferences.length; i++) {
-                if (k == i) {
-                    continue;
-                }
-
-                for (int j = 0; j < preferences.length; j++) {
-                    if (j == k || i == j) {
-                        continue;
-                    }
-
-                    paths[i][j] = Math.max(paths[i][j], Math.min(paths[i][k], paths[k][j]));
-                }
-            }
-        }
-
-        return paths;
-    }
-
     @Override
-    public Map<Integer, Order> getTrust(int service) {
+    public Map<Integer, Schulze.Order> getTrust(int service) {
         // sum closures into preferences
         final double[][] preferences = computePreferences(opClosures);
 
@@ -267,7 +211,8 @@ public class Schulze extends AbstractTrustModel<Order> {
         addExperiences(preferences, xpClosure, xpCount);
 
         // find the strongest paths
-        final double[][] paths = findStrongestPaths(preferences);
+        final double[][] paths = new double[preferences.length][preferences.length];
+        Matrices.strongestPaths(preferences, paths);
 
         final Map<Integer, Order> order = new HashMap<>();
         for (int agent = 0; agent < paths.length; agent++) {
@@ -294,60 +239,18 @@ public class Schulze extends AbstractTrustModel<Order> {
         }
     }
 
-    private void printMatrix(double[][] matrix) {
-        final StringBuilder sb = new StringBuilder();
+    static class Order implements Comparable<Order> {
+        private final double[][] paths;
+        private final int agent;
 
-        for (int source = 0; source < matrix.length; source++) {
-            sb.append("[");
-            for (int target = 0; target < matrix.length; target++) {
-                sb.append(String.format("%.2f", matrix[source][target]));
-
-                if (target == matrix.length - 1) {
-                    sb.append("]");
-                } else {
-                    sb.append(", ");
-                }
-
-            }
-            sb.append(System.lineSeparator());
+        Order(int agent, double[][] paths) {
+            this.agent = agent;
+            this.paths = paths;
         }
 
-        System.out.println(sb.toString());
-    }
-
-    private void printMatrix(boolean[][] matrix) {
-        final StringBuilder sb = new StringBuilder();
-
-        for (int source = 0; source < matrix.length; source++) {
-            sb.append("[");
-            for (int target = 0; target < matrix.length; target++) {
-                sb.append(matrix[source][target] ? 1 : 0);
-
-                if (target == matrix.length - 1) {
-                    sb.append("]");
-                } else {
-                    sb.append(", ");
-                }
-
-            }
-            sb.append(System.lineSeparator());
+        @Override
+        public int compareTo(@NotNull Order that) {
+            return Double.compare(paths[this.agent][that.agent], paths[that.agent][this.agent]);
         }
-
-        System.out.println(sb.toString());
-    }
-}
-
-class Order implements Comparable<Order> {
-    private final double[][] paths;
-    private final int agent;
-
-    Order(int agent, double[][] paths) {
-        this.agent = agent;
-        this.paths = paths;
-    }
-
-    @Override
-    public int compareTo(@NotNull Order that) {
-        return Double.compare(paths[this.agent][that.agent], paths[that.agent][this.agent]);
     }
 }
