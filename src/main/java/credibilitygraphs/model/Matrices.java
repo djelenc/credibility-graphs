@@ -36,27 +36,27 @@ public class Matrices {
     }
 
     /**
-     * Expands given adjacency matrix with edge between src and tgt of value val.
+     * Expands given adjacency matrix with edge between source and target of value val.
      * Dynamically updates the corresponding closure matrix.
      */
-    static void expand(double[][] adjacency, int src, int tgt, double val, double[][] closure) {
-        if (closure[tgt][src] > 0) {
+    static void expand(double[][] adjacency, int source, int target, double val, double[][] closure) {
+        if (closure[target][source] > 0) {
             // skip the KB supports the contrary
             System.err.printf("Aborted expansion [%d < %d, %.2f], because existing KB contains [%d < %d, %.2f]",
-                    src, tgt, val, tgt, src, closure[tgt][src]);
+                    source, target, val, target, source, closure[target][source]);
             return;
         }
 
-        // OLD: adjacency[src][tgt] = val;
-        adjacency[src][tgt] += val;
+        // OLD: adjacency[source][target] = val;
+        adjacency[source][target] += val;
 
         for (int i = 0; i < closure.length; i++) {
             for (int j = 0; j < closure.length; j++) {
-                if ((closure[i][src] > 0 || i == src) && (closure[tgt][j] > 0 || tgt == j)) {
-                    if (i == src && j == tgt) {
+                if ((closure[i][source] > 0 || i == source) && (closure[target][j] > 0 || target == j)) {
+                    if (i == source && j == target) {
                         closure[i][j] = Math.max(val, closure[i][j]);
                     } else {
-                        closure[i][j] = Math.min(val, Math.max(closure[i][src], closure[tgt][j]));
+                        closure[i][j] = Math.min(val, Math.max(closure[i][source], closure[target][j]));
                     }
                 }
             }
@@ -64,17 +64,17 @@ public class Matrices {
     }
 
     /**
-     * Removes all paths from from src to target. The adjacency and the closure matrices are dynamically updated.
+     * Removes all paths from from source to target. The adjacency and the closure matrices are dynamically updated.
      */
-    static void contract(double[][] adjacency, int src, int tgt, double[][] closure) {
-        final double support = closure[src][tgt];
+    static void contract(double[][] adjacency, int source, int target, double[][] closure) {
+        final double support = closure[source][target];
 
         for (int i = 0; i < closure.length; i++) {
             for (int j = 0; j < closure.length; j++) {
                 if (support >= adjacency[i][j]
                         && adjacency[i][j] > 0
-                        && (closure[src][i] >= adjacency[i][j] || src == i)
-                        && (closure[j][tgt] >= adjacency[i][j] || tgt == j)) {
+                        && (closure[source][i] >= adjacency[i][j] || source == i)
+                        && (closure[j][target] >= adjacency[i][j] || target == j)) {
                     adjacency[i][j] = 0;
                 }
             }
