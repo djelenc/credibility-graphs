@@ -27,8 +27,11 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
     public void initialize(Object... objects) {
     }
 
+    int time = 0;
+
     @Override
     public void setCurrentTime(int i) {
+        time = i;
     }
 
     @Override
@@ -141,7 +144,11 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         }
 
         // sort statements by support
-        statements.sort(Comparator.comparingDouble(o -> -o.support));
+        statements.sort(Comparator.comparingDouble(o -> o.support));
+
+        if (time == 99) {
+            System.out.println(statements);
+        }
 
         // create matrices
         final double[][] adjacency = new double[opClosures.length][opClosures.length];
@@ -155,14 +162,50 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         for (Statement s : statements) {
             if (strongestPaths[s.target][s.source] == 0d) {
                 // if there is no contradiction, expand the KB with this statement
+                /*if (expansion == 43) {
+                    System.out.println("BREAK");
+                    System.out.println(Matrices.printMatrix(adjacency, false));
+                }*/
                 Matrices.expand(adjacency, s.source, s.target, s.support, strongestPaths);
+                /*final double[][] doubleCheckStrongestPaths = new double[adjacency.length][adjacency.length];
+                Matrices.strongestPaths(adjacency, doubleCheckStrongestPaths);
+                final boolean same = Arrays.deepEquals(strongestPaths, doubleCheckStrongestPaths);
+                if (!same) {
+                    System.out.printf("[%d] Expansion difference. It is:%n%s%nBut it should be%n%s%n",
+                            time, Matrices.printMatrix(strongestPaths), Matrices.printMatrix(doubleCheckStrongestPaths));
+                }*/
                 expansion++;
             } else if (strongestPaths[s.target][s.source] < s.support) {
                 // if there is a contradiction, but the support for the new statement
                 // is stronger, contract the opposite statement from the KB, and
                 // expand it with new statement
+
+                /*if (time == 5 && s.source == 7 && s.target == 8) {
+                    System.out.println("ADJACENCY");
+                    Matrices.printMatrix(adjacency, false);
+                    System.out.println("PATHS");
+                    Matrices.printMatrix(strongestPaths);
+                }*/
+
                 Matrices.contract(adjacency, s.target, s.source, strongestPaths);
+
+                /*if (time == 5 && s.source == 7 && s.target == 8) {
+                    System.out.println("ADJACENCY");
+                    Matrices.printMatrix(adjacency);
+                    System.out.println("PATHS");
+                    Matrices.printMatrix(strongestPaths);
+                }*/
+
                 Matrices.expand(adjacency, s.source, s.target, s.support, strongestPaths);
+
+                /*final double[][] doubleCheckStrongestPaths = new double[adjacency.length][adjacency.length];
+                Matrices.strongestPaths(adjacency, doubleCheckStrongestPaths);
+                final boolean same = Arrays.deepEquals(strongestPaths, doubleCheckStrongestPaths);
+                if (!same) {
+                    System.out.printf("[%d] Revision difference. It is:%n%s%nBut it should be%n%s%n",
+                            time, Matrices.printMatrix(strongestPaths), Matrices.printMatrix(doubleCheckStrongestPaths));
+                }*/
+
                 revision++;
             } else {
                 // else, skip new data

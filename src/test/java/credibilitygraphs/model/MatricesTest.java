@@ -1,7 +1,10 @@
 package credibilitygraphs.model;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 
 public class MatricesTest {
@@ -41,9 +44,9 @@ public class MatricesTest {
         final double[][] strongestPaths = new double[adjacency.length][adjacency.length];
         Matrices.strongestPaths(adjacency, strongestPaths);
 
-        Matrices.expand(adjacency, 1, 3, 2d, strongestPaths);
+        Matrices.expand(adjacency, 1, 3, 2, strongestPaths);
 
-        Assert.assertEquals(adjacency[1][3], 2d, 0.0001);
+        Assert.assertEquals(adjacency[1][3], 2, 0.0001);
         final double[][] expectedStrongestPaths = new double[][]{
                 {0, 2, 1, 2, 2},
                 {0, 0, 1, 2, 2},
@@ -70,7 +73,7 @@ public class MatricesTest {
         final double[][] expectedStrongestPaths = new double[adjacency.length][adjacency.length];
         Matrices.strongestPaths(adjacency, expectedStrongestPaths);
 
-        Matrices.expand(adjacency, 1, 0, 3d, strongestPaths);
+        Matrices.expand(adjacency, 1, 0, 3, strongestPaths);
 
         Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
@@ -79,9 +82,9 @@ public class MatricesTest {
     public void contractionOK() {
         final double[][] adjacency = new double[][]{
                 {0, 2, 0, 0, 0, 0},
-                {0, 0, 1, 2, 0, 1.25d},
+                {0, 0, 1, 2, 0, 1.25},
                 {0, 0, 0, 0, 2, 0},
-                {0, 0, 1.5f, 0, 1, 0},
+                {0, 0, 1.5, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 1, 0, 0, 0}
         };
@@ -92,15 +95,15 @@ public class MatricesTest {
 
         final double[][] expectedAdjacency = new double[][]{
                 {0, 2, 0, 0, 0, 0},
-                {0, 0, 0, 2, 0, 1.25d},
+                {0, 0, 0, 2, 0, 1.25},
                 {0, 0, 0, 0, 2, 0},
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0}
         };
         final double[][] expectedStrongestPaths = new double[][]{
-                {0, 2, 0, 2, 0, 1.25d},
-                {0, 0, 0, 2, 0, 1.25d},
+                {0, 2, 0, 2, 0, 1.25},
+                {0, 0, 0, 2, 0, 1.25},
                 {0, 0, 0, 0, 2, 0},
                 {0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0},
@@ -109,6 +112,13 @@ public class MatricesTest {
 
         Assert.assertArrayEquals(expectedAdjacency, adjacency);
         Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
+    }
+
+    @Ignore
+    @Test
+    public void aaa() {
+        final double[][] expectedStrongestPaths = new double[10][10];
+        System.out.println(Matrices.printMatrix(expectedStrongestPaths));
     }
 
     @Test

@@ -16,7 +16,7 @@ import java.util.Map;
    - Vkljuci casovno diskontiranje
  */
 public class Schulze extends AbstractTrustModel<PairwiseOrder> {
-    private static final int SIZE = 50;
+    private static final int SIZE = 10;
 
     // opinions
     private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
@@ -145,7 +145,7 @@ public class Schulze extends AbstractTrustModel<PairwiseOrder> {
         // clear all absolute opinions from previous ticks
         for (int i = 0; i < rcvOpinions.length; i++) {
             for (int j = 0; j < rcvOpinions.length; j++) {
-                rcvOpinions[i][j] = 0d;
+                rcvOpinions[i][j] = 0;
             }
         }
         // clear all pairwise comparisons from previous ticks
@@ -207,7 +207,7 @@ public class Schulze extends AbstractTrustModel<PairwiseOrder> {
 
         // adds experience counts to the matrix of preferences
         // XXX: It seems to not do much
-        addExperiences(preferences, xpClosure, xpCount);
+        // addExperiences(preferences, xpClosure, xpCount);
 
         // find the strongest comparisons
         final double[][] paths = new double[preferences.length][preferences.length];

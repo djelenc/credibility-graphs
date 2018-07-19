@@ -42,14 +42,14 @@ public class Matrices {
      */
     static void expand(double[][] adjacency, int source, int target, double val, double[][] strongestPaths) {
         if (strongestPaths[target][source] > 0) {
-            // skip the KB supports the contrary
+            // abort expansion; the KB supports the contrary statement
             System.err.printf("Aborted expansion [%d < %d, %.2f], because existing KB contains [%d < %d, %.2f]",
                     source, target, val, target, source, strongestPaths[target][source]);
             return;
         }
 
         // OLD: adjacency[source][target] = val;
-        adjacency[source][target] += val;
+        adjacency[source][target] = val;
 
         for (int i = 0; i < strongestPaths.length; i++) {
             for (int j = 0; j < strongestPaths.length; j++) {
@@ -57,7 +57,7 @@ public class Matrices {
                     if (i == source && j == target) {
                         strongestPaths[i][j] = Math.max(val, strongestPaths[i][j]);
                     } else {
-                        strongestPaths[i][j] = Math.min(val, Math.max(strongestPaths[i][source], strongestPaths[target][j]));
+                        strongestPaths[i][j] = Math.min(Math.max(strongestPaths[i][source], strongestPaths[target][j]), val);
                     }
                 }
             }
@@ -86,15 +86,37 @@ public class Matrices {
         strongestPaths(adjacency, strongestPaths);
     }
 
-    static void printMatrix(double[][] matrix) {
+    static String printMatrix(double[][] matrix) {
+        return printMatrix(matrix, true);
+    }
+
+    static String printMatrix(double[][] matrix, boolean indexes) {
         final StringBuilder sb = new StringBuilder();
+
+        if (indexes) {
+            sb.append(" ");
+            for (int i = 0; i < matrix.length; i++) {
+                sb.append(String.format("%6s", i));
+            }
+            sb.append(System.lineSeparator());
+        }
+
         for (int source = 0; source < matrix.length; source++) {
-            sb.append("[");
+            if (indexes) {
+                sb.append(String.format("%3s [", source));
+            } else {
+                sb.append("[");
+            }
+
             for (int target = 0; target < matrix.length; target++) {
                 sb.append(String.format("%.2f", matrix[source][target]));
 
                 if (target == matrix.length - 1) {
-                    sb.append("]");
+                    if (indexes) {
+                        sb.append(String.format("] %-3s", source));
+                    } else {
+                        sb.append("]");
+                    }
                 } else {
                     sb.append(", ");
                 }
@@ -103,6 +125,15 @@ public class Matrices {
             sb.append(System.lineSeparator());
         }
 
-        System.out.println(sb.toString());
+        if (indexes) {
+            sb.append(" ");
+
+            for (int i = 0; i < matrix.length; i++) {
+                sb.append(String.format("%6s", i));
+            }
+            sb.append(System.lineSeparator());
+        }
+
+        return sb.toString();
     }
 }
