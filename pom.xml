@@ -45,6 +45,7 @@
                                 <source>src/main/java</source>
                                 <source>src/main/kotlin</source>
                                 <source>src/main/resources</source>
+                                <source>target/generated-sources/antlr4</source>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -58,6 +59,7 @@
                             <sourceDirs>
                                 <source>src/test/java</source>
                                 <source>src/test/kotlin</source>
+                                <source>target/generated-sources/antlr4</source>
                                 <!-- source>src/test/resources</source -->
                             </sourceDirs>
                         </configuration>
