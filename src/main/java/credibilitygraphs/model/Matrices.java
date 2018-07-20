@@ -38,26 +38,29 @@ public class Matrices {
 
     /**
      * Expands given adjacency matrix with edge between source and target of value val.
-     * Dynamically updates the corresponding strongestPaths matrix.
+     * Dynamically updates the corresponding (strongest) paths matrix.
      */
-    static void expand(double[][] adjacency, int source, int target, double val, double[][] strongestPaths) {
-        if (strongestPaths[target][source] > 0) {
+    static void expand(double[][] adjacency, int source, int target, double val, double[][] paths) {
+        if (paths[target][source] > 0) {
             // abort expansion; the KB supports the contrary statement
-            System.err.printf("Aborted expansion [%d < %d, %.2f], because existing KB contains [%d < %d, %.2f]",
-                    source, target, val, target, source, strongestPaths[target][source]);
-            return;
+            throw new Error(
+                    String.format("Aborted expansion [%d < %d, %.2f], because existing KB contains [%d < %d, %.2f]",
+                    source, target, val, target, source, paths[target][source]));
         }
 
-        // OLD: adjacency[source][target] = val;
         adjacency[source][target] = val;
 
-        for (int i = 0; i < strongestPaths.length; i++) {
-            for (int j = 0; j < strongestPaths.length; j++) {
-                if ((strongestPaths[i][source] > 0 || i == source) && (strongestPaths[target][j] > 0 || target == j)) {
+        for (int i = 0; i < paths.length; i++) {
+            for (int j = 0; j < paths.length; j++) {
+                if ((paths[i][source] > 0 || i == source) && (paths[target][j] > 0 || target == j)) {
                     if (i == source && j == target) {
-                        strongestPaths[i][j] = Math.max(val, strongestPaths[i][j]);
+                        paths[source][target] = Math.max(val, paths[source][target]);
+                    } else if (i != source && target == j) {
+                        paths[i][target] = Math.max(paths[i][target], Math.min(paths[i][source], Math.max(val, paths[source][target])));
+                    } else if (i == source && target != j) {
+                        paths[source][j] = Math.max(paths[source][j], Math.min(Math.max(val, paths[source][target]), paths[target][j]));
                     } else {
-                        strongestPaths[i][j] = Math.min(Math.max(strongestPaths[i][source], strongestPaths[target][j]), val);
+                        paths[i][j] = Math.max(paths[i][j], Math.min(paths[i][source], Math.min(Math.max(val, paths[source][target]), paths[target][j])));
                     }
                 }
             }
@@ -134,6 +137,30 @@ public class Matrices {
             sb.append(System.lineSeparator());
         }
 
+        return sb.toString();
+    }
+
+    static String printNumpy(double[][] matrix) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("r0 = np.array([\n");
+
+        for (int source = 0; source < matrix.length; source++) {
+            sb.append("    [");
+
+            for (int target = 0; target < matrix.length; target++) {
+                sb.append(String.format("%.2f", matrix[source][target]));
+
+                if (target == matrix.length - 1) {
+                    sb.append("],");
+                } else {
+                    sb.append(", ");
+                }
+
+            }
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append("])");
         return sb.toString();
     }
 }

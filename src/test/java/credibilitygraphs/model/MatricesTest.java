@@ -4,7 +4,9 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Random;
 
 
 public class MatricesTest {
@@ -58,7 +60,7 @@ public class MatricesTest {
         Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
 
-    @Test
+    @Test(expected = Error.class)
     public void expansionAborted() {
         final double[][] adjacency = new double[][]{
                 {0, 2, 0, 0, 0},
@@ -70,12 +72,7 @@ public class MatricesTest {
         final double[][] strongestPaths = new double[adjacency.length][adjacency.length];
         Matrices.strongestPaths(adjacency, strongestPaths);
 
-        final double[][] expectedStrongestPaths = new double[adjacency.length][adjacency.length];
-        Matrices.strongestPaths(adjacency, expectedStrongestPaths);
-
         Matrices.expand(adjacency, 1, 0, 3, strongestPaths);
-
-        Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
 
     @Test
@@ -114,13 +111,6 @@ public class MatricesTest {
         Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
     }
 
-    @Ignore
-    @Test
-    public void aaa() {
-        final double[][] expectedStrongestPaths = new double[10][10];
-        System.out.println(Matrices.printMatrix(expectedStrongestPaths));
-    }
-
     @Test
     public void contractionRemoveAllEdges() {
         final double[][] adjacency = new double[][]{
@@ -139,5 +129,65 @@ public class MatricesTest {
 
         Assert.assertArrayEquals(expectedAdjacency, adjacency);
         Assert.assertArrayEquals(expectedStrongestPaths, strongestPaths);
+    }
+
+    @Ignore
+    @Test
+    public void expansionRandomTests() throws IOException {
+        final int nodes = 15;
+        final double edgeProbability = 0.7;
+        final double maxEdgeValue = 9.99;
+        final int totalRuns = 1000000;
+
+        for (int seed = 0; seed < totalRuns; seed++) {
+            final Random random = new Random(seed);
+
+            // create random rankings
+            final int[] ranking = new int[nodes];
+            for (int i = 0; i < ranking.length; i++) {
+                ranking[i] = random.nextInt(nodes * nodes);
+            }
+
+            // create a random DAG
+            final double[][] adjacency = new double[nodes][nodes];
+            for (int source = 0; source < adjacency.length; source++) {
+                for (int target = 0; target < adjacency.length; target++) {
+                    if (ranking[source] < ranking[target] && random.nextDouble() < edgeProbability) {
+                        adjacency[source][target] = random.nextDouble() * maxEdgeValue;
+                    }
+                }
+            }
+            final double[][] strongestPaths = new double[nodes][nodes];
+            Matrices.strongestPaths(adjacency, strongestPaths);
+
+            // add a random node, that will change the graph
+            int source, target;
+            do {
+                source = random.nextInt(nodes);
+                target = random.nextInt(nodes);
+            } while (ranking[source] >= ranking[target]);
+
+            // remember old value
+            final double oldEdgeValue = adjacency[source][target];
+
+            // expansion
+            Matrices.expand(adjacency, source, target, maxEdgeValue, strongestPaths);
+
+            // recheck by manually running the strongest paths algorithm
+            final double[][] recheckSP = new double[nodes][nodes];
+            Matrices.strongestPaths(adjacency, recheckSP);
+
+            // abort if there's a difference
+            if (!Arrays.deepEquals(strongestPaths, recheckSP)) {
+                System.out.println("ERROR: seed = " + seed);
+                // revert adjacency value
+                adjacency[source][target] = oldEdgeValue;
+                System.out.println(Matrices.printNumpy(adjacency));
+                System.out.println("r1 = np.copy(r0)");
+                System.out.printf("r1[%d, %d] = %.2f%n", source, target, maxEdgeValue);
+                Assert.fail("Matrix mismatch!");
+                break;
+            }
+        }
     }
 }
