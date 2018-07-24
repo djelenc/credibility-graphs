@@ -4,7 +4,6 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -133,7 +132,7 @@ public class MatricesTest {
 
     @Ignore
     @Test
-    public void expansionRandomTests() throws IOException {
+    public void expansionRandomTests() {
         final int nodes = 15;
         final double edgeProbability = 0.7;
         final double maxEdgeValue = 9.99;
