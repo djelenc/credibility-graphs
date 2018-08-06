@@ -136,8 +136,9 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
                 // compute support for source < target
                 double support = 0;
                 for (int reporter = 0; reporter < opClosures.length; reporter++) {
-                    // support += opClosures[reporter][source][target] ? 1 : 0;
-                    support += opClosures[reporter][source][target] ? 1d / (1d + Math.exp(paWrong[reporter] - paRight[reporter])) : 0;
+                    if (opClosures[reporter][source][target]) {
+                        support += 1d / (1d + Math.exp(paWrong[reporter] - paRight[reporter]));
+                    }
                 }
                 statements.add(new Statement(source, target, support));
             }
