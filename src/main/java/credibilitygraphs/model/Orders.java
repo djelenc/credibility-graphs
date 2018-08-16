@@ -23,19 +23,35 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
     private int[] paRight = new int[SIZE];
     private int[] paWrong = new int[SIZE];
 
+
     static class Past {
         Experience[] experiences = new Experience[HISTORY_LENGTH];
-        double[] right = new double[HISTORY_LENGTH];
-        double[] wrong = new double[HISTORY_LENGTH];
+        // timestamps of when it was rigt (and wrongs)
+        int[] rights = new int[HISTORY_LENGTH];
+        int[] wrongs = new int[HISTORY_LENGTH];
 
+        void addExperience(Experience element) {
+            System.arraycopy(experiences, 0, experiences, 1, experiences.length - 1);
+            experiences[0] = element;
+        }
 
-        double[] weightedExperience(int time) {
+        void addRight(int time) {
+            System.arraycopy(rights, 0, rights, 1, rights.length - 1);
+            rights[0] = time;
+        }
+
+        void addWrong(int time) {
+            System.arraycopy(wrongs, 0, wrongs, 1, wrongs.length - 1);
+            wrongs[0] = time;
+        }
+
+        double[] weightedExperience(int currentTime) {
             double sum = 0, weights = 0;
             for (Experience e : experiences) {
                 if (e == null) {
                     break;
                 } else {
-                    final double w = Math.exp(-TF * (time - e.time));
+                    final double w = Math.exp(-TF * (currentTime - e.time));
                     sum += w * e.outcome;
                     weights += w;
                 }
@@ -46,6 +62,27 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
             } else {
                 return new double[]{sum / weights, weights};
             }
+        }
+
+        double weightedRights(int currentTime) {
+            return weighted(currentTime, rights);
+        }
+
+        double weightedWrongs(int currentTime) {
+            return weighted(currentTime, wrongs);
+        }
+
+        protected double weighted(int currentTime, int[] data) {
+            double sum = 0;
+            for (int time : data) {
+                if (time == 0) {
+                    break;
+                } else {
+                    sum += Math.exp(-TF * (currentTime - time));
+                }
+            }
+
+            return sum;
         }
     }
 
@@ -76,16 +113,14 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
     @Override
     public void processExperiences(List<Experience> list) {
         for (Experience e : list) {
-            Past history = local.get(e.agent);
+            Past past = local.get(e.agent);
 
-            if (null == history) { // no history
-                history = new Past();
-                local.put(e.agent, history);
-            } else { // shift values
-                System.arraycopy(history.experiences, 0, history.experiences, 1, history.experiences.length - 1);
+            if (null == past) { // no history
+                past = new Past();
+                local.put(e.agent, past);
             }
 
-            history.experiences[0] = e;
+            past.addExperience(e);
         }
 
         // clear all pairwise experience comparisons
@@ -98,11 +133,25 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         // fill the array of pairwise experience comparisons
         for (int agent1 = 0; agent1 < xpPairwise.length; agent1++) {
             for (int agent2 = 0; agent2 < xpPairwise.length; agent2++) {
-                // FIXME
-                /*if (xpSum[agent1] / xpCount[agent1] < xpSum[agent2] / xpCount[agent2]) {
-                    final double count = Math.min(xpCount[agent1], xpCount[agent2]);
+                Past past1 = local.get(agent1);
+                if (past1 == null) {
+                    past1 = new Past();
+                    local.put(agent1, past1);
+                }
+                final double[] p1 = past1.weightedExperience(time);
+
+                Past past2 = local.get(agent2);
+                if (past2 == null) {
+                    past2 = new Past();
+                    local.put(agent2, past2);
+                }
+
+                final double[] p2 = past2.weightedExperience(time);
+
+                if (p1[0] < p2[0]) {
+                    final double count = Math.min(p1[1], p2[1]);
                     xpPairwise[agent1][agent2] = count / (1 + count);
-                }*/
+                }
             }
         }
 
@@ -111,20 +160,21 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
 
         // checking past accuracy
         for (Experience e : list) {
-            // store experience
-            /*Experience[] history = local.get(e.agent);
-
-            if (null == history) { // if no history
-                history = new Experience[HISTORY_LENGTH];
-                local.put(e.agent, history);
-            } else { // shift values
-                System.arraycopy(history, 0, history, 1, history.length - 1);
-            }
-
-            history[0] = e;*/
-
             for (int agent = 0; agent < opClosures.length; agent++) {
-                // FIXME
+                // FIXME: update wrongs and rights
+                final Past past = local.get(agent);
+
+                if (past != null) {
+                    final boolean value = xpClosure[agent][e.agent] > 0;
+
+                    for (int reporter = 0; reporter < opClosures.length; reporter++) {
+                        if (value == opClosures[reporter][agent][e.agent]) {
+                            paRight[reporter] += xpClosure[agent][e.agent];
+                        } else {
+                            paWrong[reporter] += 2 * xpClosure[agent][e.agent];
+                        }
+                    }
+                }
                 /*if (xpCount[agent] > 0) { // do we have an experience to compare this against
                     final boolean value = xpClosure[agent][e.agent] > 0;
 
