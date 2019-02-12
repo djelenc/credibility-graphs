@@ -5,6 +5,8 @@ import atb.interfaces.Opinion;
 import atb.trustmodel.AbstractTrustModel;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 public class Orders extends AbstractTrustModel<PairwiseOrder> {
@@ -71,13 +73,12 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
             final int target = ex.agent;
 
             for (int agent = 0; agent < opClosures.length; agent++) {
-                if (xpCount[agent] > 0) { // do we have an experience to compare this against
-                    final boolean value = xpClosure[agent][target];
-
+                // final boolean value = xpClosure[agent][target];
+                if (xpClosure[agent][target] && xpCount[agent] > 0) { // do we have an experience to compare this against
                     for (int reporter = 0; reporter < opClosures.length; reporter++) {
-                        if (value == opClosures[reporter][agent][target]) {
+                        if (opClosures[reporter][agent][target]) {
                             paRight[reporter] += 1;
-                        } else {
+                        } else if (opClosures[reporter][target][agent]) {
                             paWrong[reporter] += 1;
                         }
                     }
@@ -182,18 +183,20 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         }
 
         // debugging
-        /* System.out.printf("E = %d, R = %d, S = %d%n", expansion, revision, skip);
-        Matrices.printMatrix(closure);
+        /*System.out.printf("E = %d, R = %d, S = %d%n", expansion, revision, skip);
+        System.out.println(Matrices.printMatrix(strongestPaths));
         System.out.println();
-        System.out.println(Arrays.toString(paRight));
-        System.out.println(Arrays.toString(paWrong));
+        System.out.println("R: " + Arrays.toString(paRight));
+        System.out.println("W: " + Arrays.toString(paWrong));
 
         final List<String> pAcc = IntStream.range(0, paRight.length)
                 .mapToObj(i -> String.format("%.2f", 1d / (1d + Math.exp(paWrong[i] - paRight[i]))))
                 .collect(Collectors.toList());
-        System.out.println(pAcc);
+        System.out.println("pAcc: " + pAcc);
         System.out.println();
-        System.out.println(Arrays.toString(xpCount));*/
+        System.out.println("EXP cnt: " + Arrays.toString(xpCount));
+        System.out.println("----------------------------------");
+        System.out.println();*/
 
         return order;
     }
