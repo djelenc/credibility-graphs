@@ -20,9 +20,6 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
     // experiences
     private double[][] xpPairwise = new double[SIZE][SIZE];
     private double[][] xpClosure = new double[SIZE][SIZE];
-    private int[] paRight = new int[SIZE];
-    private int[] paWrong = new int[SIZE];
-
 
     static class Past {
         // list of experiences
@@ -175,18 +172,24 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         // checking past accuracy
         for (Experience e : list) {
             for (int agent = 0; agent < opClosures.length; agent++) {
-                final Past past = local.get(agent);
-                if (past != null) {
-                    if (xpClosure[agent][e.agent] > 0) {
-                        for (int reporter = 0; reporter < opClosures.length; reporter++) {
-                            if (opClosures[reporter][agent][e.agent]) {
-                                paRight[reporter] += xpClosure[agent][e.agent];
-                            } else if (opClosures[reporter][e.agent][agent]) {
-                                paWrong[reporter] += xpClosure[agent][e.agent];
-                            }
+                if (xpClosure[agent][e.agent] > 0) {
+                    for (int reporter = 0; reporter < opClosures.length; reporter++) {
+                        Past past = local.get(reporter);
+                        if (past == null) {
+                            past = new Past();
+                            local.put(reporter, past);
+                        }
+
+                        if (opClosures[reporter][agent][e.agent]) {
+                            past.addRight(time);
+                            // paRight[reporter] += xpClosure[agent][e.agent];
+                        } else if (opClosures[reporter][e.agent][agent]) {
+                            past.addWrong(time);
+                            // paWrong[reporter] += xpClosure[agent][e.agent];
                         }
                     }
                 }
+                //}
             }
         }
     }
@@ -242,7 +245,12 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
                 double support = 0;
                 for (int reporter = 0; reporter < opClosures.length; reporter++) {
                     if (opClosures[reporter][source][target]) {
-                        support += 1d / (1d + Math.exp(paWrong[reporter] - paRight[reporter]));
+                        final Past past = local.get(reporter);
+                        final double right = past.weightedRights(time);
+                        final double wrong = past.weightedWrongs(time);
+
+                        // support += 1d / (1d + Math.exp(paWrong[reporter] - paRight[reporter]));
+                        support += 1d / (1d + Math.exp(wrong - right));
                     }
                 }
                 statements.add(new Statement(source, target, support));
@@ -362,7 +370,7 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
 
         final double[] _xpSum = new double[limit];
         System.arraycopy(xpSum, 0, _xpSum, 0, currentSize);
-        xpSum = _xpSum;*/
+        xpSum = _xpSum;
 
         final int[] _paRight = new int[limit];
         System.arraycopy(paRight, 0, _paRight, 0, currentSize);
@@ -370,6 +378,6 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
 
         final int[] _paWrong = new int[limit];
         System.arraycopy(paWrong, 0, _paWrong, 0, currentSize);
-        paWrong = _paWrong;
+        paWrong = _paWrong;*/
     }
 }
