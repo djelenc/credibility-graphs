@@ -5,7 +5,6 @@ import atb.interfaces.Opinion;
 import atb.trustmodel.AbstractTrustModel;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 public class Orders extends AbstractTrustModel<PairwiseOrder> {
