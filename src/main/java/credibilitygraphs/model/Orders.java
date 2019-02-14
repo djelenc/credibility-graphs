@@ -9,8 +9,6 @@ import java.util.*;
 
 public class Orders extends AbstractTrustModel<PairwiseOrder> {
     private static final int SIZE = 10;
-    private static final int HISTORY_LENGTH = 10;
-    private static final double TF = 0.1; // 0.01
 
     // opinions
     private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
@@ -21,7 +19,16 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
     private double[][] xpPairwise = new double[SIZE][SIZE];
     private double[][] xpClosure = new double[SIZE][SIZE];
 
+    // local history
+    private Past[] local = new Past[SIZE];
+
     static class Past {
+        // time decay factor
+        private static final double TF = 0.1; // 0.01
+
+        // the length of history
+        private static final int HISTORY_LENGTH = 10;
+
         // list of experiences
         Experience[] experiences = new Experience[HISTORY_LENGTH];
 
@@ -87,15 +94,11 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         }
     }
 
-    // local history
-    private Map<Integer, Past> local = null;
-
     private int time = 0;
 
     @Override
     public void initialize(Object... objects) {
         time = 0;
-        local = new LinkedHashMap<>();
     }
 
     @Override
@@ -114,14 +117,7 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
     @Override
     public void processExperiences(List<Experience> list) {
         for (Experience e : list) {
-            Past past = local.get(e.agent);
-
-            if (null == past) { // no history
-                past = new Past();
-                local.put(e.agent, past);
-            }
-
-            past.addExperience(e);
+            local[e.agent].addExperience(e);
         }
 
         // clear all pairwise experience comparisons
@@ -134,20 +130,8 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         // fill the array of pairwise experience comparisons
         for (int agent1 = 0; agent1 < xpPairwise.length; agent1++) {
             for (int agent2 = 0; agent2 < xpPairwise.length; agent2++) {
-                Past past1 = local.get(agent1);
-                if (past1 == null) {
-                    past1 = new Past();
-                    local.put(agent1, past1);
-                }
-                final double[] experiences1 = past1.weightedExperience(time);
-
-                Past past2 = local.get(agent2);
-                if (past2 == null) {
-                    past2 = new Past();
-                    local.put(agent2, past2);
-                }
-
-                final double[] experiences2 = past2.weightedExperience(time);
+                final double[] experiences1 = local[agent1].weightedExperience(time);
+                final double[] experiences2 = local[agent2].weightedExperience(time);
 
                 if (experiences1[0] < experiences2[0]) {
                     xpPairwise[agent1][agent2] = Math.min(experiences1[1], experiences2[1]);
@@ -158,38 +142,18 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         // compute closure over pairwise experience comparisons
         Matrices.strongestPaths(xpPairwise, xpClosure);
 
-        /*
-        // debugging output
-        System.out.println("EXPERIENCES at time " + time);
-        local.forEach((agent, past) -> {
-            final List<String> experiences = Arrays.stream(past.experiences).filter(Objects::nonNull).map(e -> String.format("%d: %.2f", e.time, e.outcome)).collect(Collectors.toList());
-            final double[] weighted = past.weightedExperience(time);
-            System.out.printf("%d: %s: (%.2f, %.2f)%n", agent, experiences, weighted[0], weighted[1]);
-        });
-        System.out.println(Matrices.printMatrix(xpPairwise));
-        System.out.println(Matrices.printMatrix(xpClosure));*/
-
-        // checking past accuracy
+        // updating past accuracy
         for (Experience e : list) {
             for (int agent = 0; agent < opClosures.length; agent++) {
                 if (xpClosure[agent][e.agent] > 0) {
                     for (int reporter = 0; reporter < opClosures.length; reporter++) {
-                        Past past = local.get(reporter);
-                        if (past == null) {
-                            past = new Past();
-                            local.put(reporter, past);
-                        }
-
                         if (opClosures[reporter][agent][e.agent]) {
-                            past.addRight(time);
-                            // paRight[reporter] += xpClosure[agent][e.agent];
+                            local[reporter].addRight(time);
                         } else if (opClosures[reporter][e.agent][agent]) {
-                            past.addWrong(time);
-                            // paWrong[reporter] += xpClosure[agent][e.agent];
+                            local[reporter].addWrong(time);
                         }
                     }
                 }
-                //}
             }
         }
     }
@@ -199,7 +163,7 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         // clear all absolute opinions from previous ticks
         for (int i = 0; i < rcvOpinions.length; i++) {
             for (int j = 0; j < rcvOpinions.length; j++) {
-                rcvOpinions[i][j] = 0;
+                rcvOpinions[i][j] = Double.NaN;
             }
         }
         // clear all pairwise comparisons from previous ticks
@@ -220,7 +184,9 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         for (int reporter = 0; reporter < opPairwise.length; reporter++) {
             for (int source = 0; source < opPairwise.length; source++) {
                 for (int target = 0; target < opPairwise.length; target++) {
-                    opPairwise[reporter][source][target] = rcvOpinions[reporter][source] < rcvOpinions[reporter][target];
+                    if (!Double.isNaN(rcvOpinions[reporter][source]) && !Double.isNaN(rcvOpinions[reporter][target])) {
+                        opPairwise[reporter][source][target] = rcvOpinions[reporter][source] < rcvOpinions[reporter][target];
+                    }
                 }
             }
         }
@@ -245,11 +211,10 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
                 double support = 0;
                 for (int reporter = 0; reporter < opClosures.length; reporter++) {
                     if (opClosures[reporter][source][target]) {
-                        final Past past = local.get(reporter);
+                        final Past past = local[reporter];
                         final double right = past.weightedRights(time);
                         final double wrong = past.weightedWrongs(time);
 
-                        // support += 1d / (1d + Math.exp(paWrong[reporter] - paRight[reporter]));
                         support += 1d / (1d + Math.exp(wrong - right));
                     }
                 }
@@ -257,10 +222,8 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
             }
         }
 
-        // sort statements by support
-        statements.sort(Comparator.comparingDouble(o -> -o.support)); // most to least reputable
-        // statements.sort(Comparator.comparingDouble(o -> o.support)); // least to most reputable
-        // Collections.shuffle(statements); // randomly
+        // sort statements by support: from most to least reputable
+        statements.sort(Comparator.comparingDouble(o -> -o.support));
 
         // create matrices
         final double[][] adjacency = new double[opClosures.length][opClosures.length];
@@ -268,25 +231,25 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         Matrices.strongestPaths(adjacency, strongestPaths);
 
         // debugging
-        int expansion = 0, revision = 0, skip = 0;
+        // int expansion = 0, revision = 0, skip = 0;
 
         // perform non-prioritized revision in the order of most supported statements
         for (Statement s : statements) {
             if (strongestPaths[s.target][s.source] == 0d) {
                 // if there is no contradiction, expand the KB with this statement
                 Matrices.expand(adjacency, s.source, s.target, s.support, strongestPaths);
-                expansion++;
+                // expansion++;
             } else if (strongestPaths[s.target][s.source] < s.support) {
                 // if there is a contradiction, but the support for the new statement
                 // is stronger, contract the opposite statement from the KB, and
                 // expand it with new statement
                 Matrices.contract(adjacency, s.target, s.source, strongestPaths);
                 Matrices.expand(adjacency, s.source, s.target, s.support, strongestPaths);
-                revision++;
-            } else {
+                // revision++;
+            } /*else {
                 // else, skip new data
                 skip++;
-            }
+            }*/
         }
 
         final Map<Integer, PairwiseOrder> order = new HashMap<>();
@@ -364,20 +327,14 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         xpPairwise = _xpPairwise;
         xpClosure = _xpClosure;
 
-        /*final int[] _xpCount = new int[limit];
-        System.arraycopy(xpCount, 0, _xpCount, 0, currentSize);
-        xpCount = _xpCount;
-
-        final double[] _xpSum = new double[limit];
-        System.arraycopy(xpSum, 0, _xpSum, 0, currentSize);
-        xpSum = _xpSum;
-
-        final int[] _paRight = new int[limit];
-        System.arraycopy(paRight, 0, _paRight, 0, currentSize);
-        paRight = _paRight;
-
-        final int[] _paWrong = new int[limit];
-        System.arraycopy(paWrong, 0, _paWrong, 0, currentSize);
-        paWrong = _paWrong;*/
+        // increase and initialize past experiences
+        final Past[] _local = new Past[limit];
+        System.arraycopy(local, 0, _local, 0, currentSize);
+        for (int i = 0; i < limit; i++) {
+            if (_local[i] == null) {
+                _local[i] = new Past();
+            }
+        }
+        local = _local;
     }
 }
