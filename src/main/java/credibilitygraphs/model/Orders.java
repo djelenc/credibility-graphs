@@ -30,13 +30,13 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         private static final int HISTORY_LENGTH = 10;
 
         // list of experiences
-        Experience[] experiences = new Experience[HISTORY_LENGTH];
+        final Experience[] experiences = new Experience[HISTORY_LENGTH];
 
         // timestamps of when the agent was right
-        int[] wrongs = new int[HISTORY_LENGTH];
+        final int[] wrongs = new int[HISTORY_LENGTH];
 
         // timestamps of when the agent was wrong
-        int[] rights = new int[HISTORY_LENGTH];
+        final int[] rights = new int[HISTORY_LENGTH];
 
         void addExperience(Experience element) {
             System.arraycopy(experiences, 0, experiences, 1, experiences.length - 1);
@@ -80,7 +80,7 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
             return weighted(currentTime, wrongs);
         }
 
-        protected double weighted(int currentTime, int[] data) {
+        private double weighted(int currentTime, int[] data) {
             double sum = 0;
             for (int time : data) {
                 if (time == 0) {
