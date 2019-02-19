@@ -8,23 +8,25 @@ import java.util.*;
 
 
 public class Orders extends AbstractTrustModel<PairwiseOrder> {
-    private static final int SIZE = 10;
+    // the "starting number" of false opinions
+    // prevents new reporters from having too much influence
+    private static final double TRUTH_OFFSET = 5.0;
 
     // opinions
-    private boolean[][][] opPairwise = new boolean[SIZE][SIZE][SIZE];
-    private boolean[][][] opClosures = new boolean[SIZE][SIZE][SIZE];
-    private double[][] rcvOpinions = new double[SIZE][SIZE];
+    private boolean[][][] opPairwise = new boolean[0][0][0];
+    private boolean[][][] opClosures = new boolean[0][0][0];
+    private double[][] rcvOpinions = new double[0][0];
 
     // experiences
-    private double[][] xpPairwise = new double[SIZE][SIZE];
-    private double[][] xpClosure = new double[SIZE][SIZE];
+    private double[][] xpPairwise = new double[0][0];
+    private double[][] xpClosure = new double[0][0];
 
     // local history
-    private Past[] local = new Past[SIZE];
+    private Past[] local = new Past[0];
 
     static class Past {
         // time decay factor
-        private static final double TF = 0.1; // 0.01
+        private static final double TF = 0.1;
 
         // the length of history
         private static final int HISTORY_LENGTH = 10;
@@ -144,15 +146,23 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
 
         // updating past accuracy
         for (Experience e : list) {
-            for (int agent = 0; agent < opClosures.length; agent++) {
-                if (xpClosure[agent][e.agent] > 0) {
-                    for (int reporter = 0; reporter < opClosures.length; reporter++) {
+            for (int reporter = 0; reporter < opClosures.length; reporter++) {
+                int right = 0, wrong = 0;
+
+                for (int agent = 0; agent < opClosures.length; agent++) {
+                    if (xpClosure[agent][e.agent] > 0) {
                         if (opClosures[reporter][agent][e.agent]) {
-                            local[reporter].addRight(time);
+                            right++;
                         } else if (opClosures[reporter][e.agent][agent]) {
-                            local[reporter].addWrong(time);
+                            wrong++;
                         }
                     }
+                }
+
+                if (right > wrong) {
+                    local[reporter].addRight(time);
+                } else {
+                    local[reporter].addWrong(time);
                 }
             }
         }
@@ -215,7 +225,7 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
                         final double right = past.weightedRights(time);
                         final double wrong = past.weightedWrongs(time);
 
-                        support += 1d / (1d + Math.exp(wrong - right));
+                        support += 1d / (1d + Math.exp(TRUTH_OFFSET + wrong - right));
                     }
                 }
                 statements.add(new Statement(source, target, support));
@@ -257,22 +267,6 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
             order.put(agent, new PairwiseOrder(agent, adjacency));
         }
 
-        // debugging
-        /* System.out.printf("E = %d, R = %d, S = %d%n", expansion, revision, skip);
-        System.out.println(Matrices.printMatrix(strongestPaths));
-        System.out.println();
-        System.out.println("R: " + Arrays.toString(paRight));
-        System.out.println("W: " + Arrays.toString(paWrong));
-
-        final List<String> pAcc = IntStream.range(0, paRight.length)
-                .mapToObj(i -> String.format("%.2f", 1d / (1d + Math.exp(paWrong[i] - paRight[i]))))
-                .collect(Collectors.toList());
-        System.out.println("pAcc: " + pAcc);
-        System.out.println();
-        System.out.println("EXP: " + local);
-        System.out.println("----------------------------------");
-        System.out.println();*/
-
         return order;
     }
 
@@ -297,7 +291,7 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         // expands all arrays when the number of agents increases
 
         final int currentSize = opPairwise.length;
-        final int limit = list.stream().max(Integer::compareTo).orElse(SIZE) + 1;
+        final int limit = list.stream().max(Integer::compareTo).orElse(0) + 1;
 
         if (limit <= currentSize) {
             return;
