@@ -236,13 +236,20 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         statements.sort(Comparator.comparingDouble(o -> -o.support));
 
         // create matrices
+        // start with experiences and add statements incrementally
         final double[][] adjacency = new double[opClosures.length][opClosures.length];
         final double[][] strongestPaths = new double[opClosures.length][opClosures.length];
-        Matrices.strongestPaths(adjacency, strongestPaths);
+        for (int i = 0; i < xpClosure.length; i++) {
+            System.arraycopy(xpPairwise[i], 0, adjacency[i], 0, xpPairwise.length);
+            System.arraycopy(xpClosure[i], 0, strongestPaths[i], 0, xpClosure.length);
+        }
+
+        // final double[][] adjacency = new double[opClosures.length][opClosures.length];
+        // final double[][] strongestPaths = new double[opClosures.length][opClosures.length];
+        // Matrices.strongestPaths(adjacency, strongestPaths);
 
         // debugging
         // int expansion = 0, revision = 0, skip = 0;
-
         // perform non-prioritized revision in the order of most supported statements
         for (Statement s : statements) {
             if (strongestPaths[s.target][s.source] == 0d) {
@@ -261,6 +268,11 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
                 skip++;
             }*/
         }
+
+        /*System.out.println("TIME: " + time);
+        System.out.println(Matrices.printMatrix(xpClosure));
+        System.out.println(Matrices.printMatrix(strongestPaths));*/
+
 
         final Map<Integer, PairwiseOrder> order = new HashMap<>();
         for (int agent = 0; agent < adjacency.length; agent++) {
