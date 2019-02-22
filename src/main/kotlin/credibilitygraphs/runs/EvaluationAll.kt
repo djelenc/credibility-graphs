@@ -1,41 +1,29 @@
-package credibilitygraphs
+package credibilitygraphs.runs
 
 import atb.deceptionmodel.Complementary
 import atb.deceptionmodel.Truthful
-import atb.infrastructure.*
-import atb.interfaces.Metric
-import atb.interfaces.Scenario
-import atb.interfaces.TrustModel
 import atb.metric.KendallsTauA
 import atb.scenario.Random
 import atb.trustmodel.*
 import atb.trustmodel.qad.QTM
+import credibilitygraphs.ProgrammaticRun.Parameters
+import credibilitygraphs.ProgrammaticRun.Setup
+import credibilitygraphs.ProgrammaticRun.run
 import credibilitygraphs.model.Loose
 import credibilitygraphs.model.Orders
 import credibilitygraphs.model.Strict
-import java.io.File
-import java.util.concurrent.CountDownLatch
-
-class Parameters(val duration: Int, val fromSeed: Int, val toSeed: Int,
-                 val model: TrustModel<*>, val modelParams: Array<Any>,
-                 val scenario: Scenario, val scenarioParams: Array<Any>,
-                 val metrics: Map<Metric, Array<Any>>,
-                 val resultDir: String)
-
-class Setup(val duration: Int, val fromSeed: Int, val toSeed: Int, val arguments: Map<String, Array<Any>>,
-            val metrics: Map<Metric, Array<Any>>)
 
 fun main() {
     val prefix = "results/"
 
     val models = mapOf(
-            /*AbdulRahmanHailes() to emptyArray(),
+            AbdulRahmanHailes() to emptyArray(),
             BetaReputation() to arrayOf<Any>(0.1, 0.0),
-            // BRSWithFiltering() to emptyArray<Any>(),
+            BRSWithFiltering() to emptyArray<Any>(),
             EigenTrust() to arrayOf(0.5, 0.5, 10, 0.1),
             Travos() to arrayOf(0.5, 10, 0.1, 0.95, 0.2),
             YuSinghSycara() to emptyArray(),
-            QTM() to emptyArray()//,*/
+            QTM() to emptyArray(),
             Orders() to emptyArray<Any>()
     )
 
@@ -79,8 +67,8 @@ fun main() {
     for ((scenario, setup) in scenarios) {
         for ((filename, scenarioParams) in setup.arguments) {
             for ((model, modelParams) in models) {
-                configurations.add(Parameters(setup.duration, setup.fromSeed, setup.toSeed, model, modelParams, scenario, scenarioParams,
-                        setup.metrics, prefix + filename))
+                configurations.add(Parameters(setup.duration, setup.fromSeed, setup.toSeed, model,
+                        modelParams, scenario, scenarioParams, setup.metrics, prefix + filename))
             }
         }
     }
@@ -88,53 +76,4 @@ fun main() {
     for (parameters in configurations) {
         run(parameters)
     }
-}
-
-/*
-Creates a programmatic run using given parameters. To make the runs thread safe,
-the instances of trust model, scenario and metrics are copied
- */
-fun run(params: Parameters) {
-
-    val tasks = (params.fromSeed..params.toSeed).map { seed ->
-
-        val copiedMetrics = params.metrics.map {
-            Pair(it.key.javaClass.newInstance(), it.value)
-        }.toMap()
-
-        // protocol
-        val protocol = createProtocol(params.model::class.java.newInstance(), params.modelParams,
-                params.scenario::class.java.newInstance(), params.scenarioParams, copiedMetrics, seed)
-
-        setupEvaluation(protocol, params.duration, copiedMetrics.keys)
-    }
-
-    val latch = CountDownLatch(1)
-
-    runBatch(tasks, { results ->
-        when {
-            results.all { it is Completed } -> {
-                val directory = File(params.resultDir)
-                if (!directory.exists()) {
-                    directory.mkdirs()
-                }
-
-                BatchEvaluationData(results.map { (it as Completed).data }).toJSON(directory.path)
-                println("Saved to $directory")
-            }
-            else -> println("The run encountered errors")
-        }
-
-
-        latch.countDown()
-    }, {
-        when (it) {
-            is Completed -> println("Completed ${it.data.protocol.scenario} (seed ${it.data.seed}, ${it.data.protocol.trustModel})")
-            is Interrupted -> println("Interrupted at ${it.tick}")
-            is Faulted -> println("An exception (${it.thrown}) occurred at ${it.tick}")
-            else -> println("Something else went wrong ...")
-        }
-    })
-
-    latch.await()
 }
