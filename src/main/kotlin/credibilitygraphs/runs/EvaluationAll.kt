@@ -44,9 +44,7 @@ fun main() {
                     "loose-10-interactions-1.0" to arrayOf(100, 0.1, 0.05, mapOf(Loose() to 1.0), 0.0, 0.0, 1.0),
                     "strict-10-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Strict() to 1.0), 0.0, 0.0, 0.1),
                     "strict-10-interactions-1.0" to arrayOf(100, 0.1, 0.05, mapOf(Strict() to 1.0), 0.0, 0.0, 1.0)
-            ),
-                    mapOf(KendallsTauA() to emptyArray())
-            )
+            ), mapOf(KendallsTauA() to emptyArray()))
             /*Transitive() to Setup(100, fromSeed, toSeed, mapOf(
                     "tra-0.1" to arrayOf(100, 0.1, 0.05, 0.1, 1.0),
                     "tra-1.0" to arrayOf(100, 0.1, 0.05, 1.0, 1.0)),
