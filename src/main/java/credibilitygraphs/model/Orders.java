@@ -228,7 +228,10 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
                         support += 1d / (1d + Math.exp(TRUTH_OFFSET + wrong - right));
                     }
                 }
-                statements.add(new Statement(source, target, support));
+                // consider statement only if support is larger than 0
+                if (support > 0) {
+                    statements.add(new Statement(source, target, support));
+                }
             }
         }
 
