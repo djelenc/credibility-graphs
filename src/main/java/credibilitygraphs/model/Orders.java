@@ -162,6 +162,7 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
                 if (right > wrong) {
                     local[reporter].addRight(time);
                 } else {
+                    // FIXME: wrong only if wrong > right
                     local[reporter].addWrong(time);
                 }
             }
