@@ -68,7 +68,6 @@ fun main() {
                     mapOf(KendallsTauA() to emptyArray())
             ),
             // transitive with changes
-            // TODO make sure BRS and BRSF use correct discounting values
             TransitiveWithChanges() to Setup(1000, fromSeed, toSeed, mapOf(
                     "dynamic-0.1" to arrayOf(100, 0.1, 0.05, 0.1, 1.0, 0.01, 1)),
                     mapOf(KendallsTauA() to emptyArray())
