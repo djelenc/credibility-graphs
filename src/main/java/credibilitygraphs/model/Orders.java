@@ -346,4 +346,9 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
         }
         local = _local;
     }
+
+    @Override
+    public String toString() {
+        return "Credibility Dynamics";
+    }
 }
