@@ -16,60 +16,66 @@ import credibilitygraphs.ProgrammaticRun.run
 import credibilitygraphs.model.Loose
 import credibilitygraphs.model.Orders
 import credibilitygraphs.model.Strict
+import java.io.File
+
 
 fun main() {
-    val prefix = "evaluations/"
+    val prefix = "evaluations-30/"
+    val directory = File(prefix)
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
 
     val models = mapOf(
             AbdulRahmanHailes() to emptyArray(),
             BetaReputation() to arrayOf<Any>(0.1, 0.0),
             BRSWithFiltering() to arrayOf<Any>(0.1, 0.0, 0.01, 10.0),
-            EigenTrust() to arrayOf(0.5, 0.5, 10, 0.1),
-            Travos() to arrayOf(0.5, 10, 0.1, 0.95, 0.2),
+            EigenTrust() to arrayOf<Any>(0.5, 0.5, 10, 0.1),
+            Travos() to arrayOf<Any>(0.5, 10, 0.1, 0.95, 0.2),
             YuSinghSycara() to emptyArray(),
             QTM() to emptyArray(),
             Orders() to emptyArray()
     )
 
     val fromSeed = 1
-    val toSeed = 15
+    val toSeed = 30
 
     val scenarios = mapOf(
             // simple scenarios
             Random() to Setup(100, fromSeed, toSeed, mapOf(
                     // random truth
-                    "random-truth-1-9-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.1, Truthful() to 0.9), 0.0, 0.0, 0.1),
-                    "random-truth-9-1-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.9, Truthful() to 0.1), 0.0, 0.0, 0.1),
-                    "random-truth-5-5-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.5, Truthful() to 0.5), 0.0, 0.0, 0.1),
+                    "random-truth-1-9" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.1, Truthful() to 0.9), 0.0, 0.0, 0.1),
+                    "random-truth-9-1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.9, Truthful() to 0.1), 0.0, 0.0, 0.1),
+                    "random-truth-5-5" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.5, Truthful() to 0.5), 0.0, 0.0, 0.1),
                     // random strict
-                    "random-strict-1-9-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.1, Strict() to 0.9), 0.0, 0.0, 0.1),
-                    "random-strict-9-1-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.9, Strict() to 0.1), 0.0, 0.0, 0.1),
-                    "random-strict-5-5-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.5, Strict() to 0.5), 0.0, 0.0, 0.1),
+                    "random-strict-1-9" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.1, Strict() to 0.9), 0.0, 0.0, 0.1),
+                    "random-strict-9-1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.9, Strict() to 0.1), 0.0, 0.0, 0.1),
+                    "random-strict-5-5" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.5, Strict() to 0.5), 0.0, 0.0, 0.1),
                     // random loose
-                    "random-loose-1-9-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.1, Loose() to 0.9), 0.0, 0.0, 0.1),
-                    "random-loose-5-5-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.5, Loose() to 0.5), 0.0, 0.0, 0.1),
-                    "random-loose-9-1-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.9, Loose() to 0.1), 0.0, 0.0, 0.1),
+                    "random-loose-1-9" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.1, Loose() to 0.9), 0.0, 0.0, 0.1),
+                    "random-loose-5-5" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.5, Loose() to 0.5), 0.0, 0.0, 0.1),
+                    "random-loose-9-1" to arrayOf(100, 0.1, 0.05, mapOf(RandomDeception() to 0.9, Loose() to 0.1), 0.0, 0.0, 0.1),
                     // complementary truth
-                    "complementary-truth-1-9-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.1, Truthful() to 0.9), 0.0, 0.0, 0.1),
-                    "complementary-truth-9-1-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.9, Truthful() to 0.1), 0.0, 0.0, 0.1),
-                    "complementary-truth-5-5-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.5, Truthful() to 0.5), 0.0, 0.0, 0.1),
+                    "complementary-truth-1-9" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.1, Truthful() to 0.9), 0.0, 0.0, 0.1),
+                    "complementary-truth-9-1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.9, Truthful() to 0.1), 0.0, 0.0, 0.1),
+                    "complementary-truth-5-5" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.5, Truthful() to 0.5), 0.0, 0.0, 0.1),
                     // complementary strict
-                    "complementary-strict-1-9-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.1, Strict() to 0.9), 0.0, 0.0, 0.1),
-                    "complementary-strict-9-1-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.9, Strict() to 0.1), 0.0, 0.0, 0.1),
-                    "complementary-strict-5-5-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.5, Strict() to 0.5), 0.0, 0.0, 0.1),
+                    "complementary-strict-1-9" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.1, Strict() to 0.9), 0.0, 0.0, 0.1),
+                    "complementary-strict-9-1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.9, Strict() to 0.1), 0.0, 0.0, 0.1),
+                    "complementary-strict-5-5" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.5, Strict() to 0.5), 0.0, 0.0, 0.1),
                     // complementary loose
-                    "complementary-loose-1-9-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.1, Loose() to 0.9), 0.0, 0.0, 0.1),
-                    "complementary-loose-9-1-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.9, Loose() to 0.1), 0.0, 0.0, 0.1),
-                    "complementary-loose-5-5-interactions-0.1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.5, Loose() to 0.5), 0.0, 0.0, 0.1)
+                    "complementary-loose-1-9" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.1, Loose() to 0.9), 0.0, 0.0, 0.1),
+                    "complementary-loose-9-1" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.9, Loose() to 0.1), 0.0, 0.0, 0.1),
+                    "complementary-loose-5-5" to arrayOf(100, 0.1, 0.05, mapOf(Complementary() to 0.5, Loose() to 0.5), 0.0, 0.0, 0.1)
             ), mapOf(KendallsTauA() to emptyArray())),
             // transitive
             Transitive() to Setup(100, fromSeed, toSeed, mapOf(
-                    "tra-0.1" to arrayOf(100, 0.1, 0.05, 0.1, 1.0)),
+                    "tra" to arrayOf(100, 0.1, 0.05, 0.1, 1.0)),
                     mapOf(KendallsTauA() to emptyArray())
             ),
             // transitive with changes
             TransitiveWithChanges() to Setup(1000, fromSeed, toSeed, mapOf(
-                    "dynamic-0.1" to arrayOf(100, 0.1, 0.05, 0.1, 1.0, 0.01, 1)),
+                    "dynamic" to arrayOf(100, 0.1, 0.05, 0.1, 1.0, 0.01, 1)),
                     mapOf(KendallsTauA() to emptyArray())
             ),
             // newcomers

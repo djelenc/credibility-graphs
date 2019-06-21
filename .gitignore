@@ -10,5 +10,4 @@
 /*.csv
 /results
 /simple
-/evaluations
-/evaluations.bkp
+/evaluations*
