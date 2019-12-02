@@ -1,3 +1,5 @@
 credibilitygraphs.model.Orders
+credibilitygraphs.model.OrdersReverse
+credibilitygraphs.model.OrdersRandom
 credibilitygraphs.model.Schulze
 credibilitygraphs.model.CredibilityOrdersTM
