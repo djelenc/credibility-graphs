@@ -237,6 +237,8 @@ public class Orders extends AbstractTrustModel<PairwiseOrder> {
 
         // sort statements by support: from most to least reputable
         statements.sort(Comparator.comparingDouble(o -> -o.support));
+//        statements.sort(Comparator.comparingDouble(o -> o.support));
+//        Collections.shuffle(statements);
 
         // create matrices
         // start with experiences and add statements incrementally

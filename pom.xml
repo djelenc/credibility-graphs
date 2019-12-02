@@ -219,5 +219,10 @@
             <artifactId>aparapi</artifactId>
             <version>1.9.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>14-ea+2</version>
+        </dependency>
     </dependencies>
 </project>
