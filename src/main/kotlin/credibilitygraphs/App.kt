@@ -59,8 +59,11 @@ object App {
     }
 
     fun paperEmptyStart() {
-        val kb = NumericKnowledgeBase("")
-//        kb.exportDOT("./initial-1", Format.PNG, nodePrefix = "H")
+        val kb = NumericKnowledgeBase("(0, 1, 0), (2, 3, 0), (3, 4, 0)")
+        kb.contraction(0, 1)
+        kb.contraction(2, 3)
+        kb.contraction(3, 4)
+        kb.exportDOT("./1-step-0", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(0, 3, 3))
         kb.exportDOT("./1-step-1", Format.PNG, nodePrefix = "H")
@@ -98,12 +101,58 @@ object App {
         kb.expansion(CredibilityObject(2, 4, 1))
         kb.exportDOT("./1-step-12", Format.PNG, nodePrefix = "H")
     }
+
+    fun paperPriorKnowledge() {
+        val kb = NumericKnowledgeBase("(2, 0, 1), (0, 1, 1), (2, 1, 5), (3, 4, 0)")
+        kb.contraction(3, 4)
+        kb.exportDOT("./2-step-0", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(0, 3, 3))
+        kb.exportDOT("./2-step-1", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(1, 3, 3))
+        kb.exportDOT("./2-step-2", Format.PNG, nodePrefix = "H")
+
+        kb.contraction(0, 1)
+        kb.exportDOT("./2-step-3a", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(1, 0, 2))
+        kb.exportDOT("./2-step-3b", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(0, 2, 2))
+        kb.exportDOT("./2-step-4", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(1, 2, 2))
+        kb.exportDOT("./2-step-5", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(3, 2, 2))
+        kb.exportDOT("./2-step-6", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(0, 4, 2))
+        kb.exportDOT("./2-step-7", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(2, 0, 1))
+        kb.exportDOT("./2-step-8", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(0, 1, 1))
+        kb.exportDOT("./2-step-9", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(4, 3, 1))
+        kb.exportDOT("./2-step-10", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(1, 4, 1))
+        kb.exportDOT("./2-step-11", Format.PNG, nodePrefix = "H")
+
+        kb.expansion(CredibilityObject(2, 4, 1))
+        kb.exportDOT("./2-step-12", Format.PNG, nodePrefix = "H")
+    }
 }
 
 fun main(args: Array<String>) {
     // App.paper()
     // App.numeric()
     App.paperEmptyStart()
+    App.paperPriorKnowledge()
     // App.merge()
 }
 
