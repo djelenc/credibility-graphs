@@ -63,40 +63,40 @@ object App {
 //        kb.exportDOT("./initial-1", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(0, 3, 3))
-        kb.exportDOT("./1-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-1", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(1, 3, 3))
-        kb.exportDOT("./2-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-2", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(1, 0, 2))
-        kb.exportDOT("./3-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-3", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(0, 2, 2))
-        kb.exportDOT("./4-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-4", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(1, 2, 2))
-        kb.exportDOT("./5-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-5", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(3, 2, 2))
-        kb.exportDOT("./6-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-6", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(0, 4, 2))
-        kb.exportDOT("./7-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-7", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(2, 0, 1))
-        kb.exportDOT("./8-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-8", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(0, 1, 1))
-        kb.exportDOT("./9-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-9", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(4, 3, 1))
-        kb.exportDOT("./10-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-10", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(1, 4, 1))
-        kb.exportDOT("./11-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-11", Format.PNG, nodePrefix = "H")
 
         kb.expansion(CredibilityObject(2, 4, 1))
-        kb.exportDOT("./12-expansion", Format.PNG, nodePrefix = "H")
+        kb.exportDOT("./1-step-12", Format.PNG, nodePrefix = "H")
     }
 }
 
