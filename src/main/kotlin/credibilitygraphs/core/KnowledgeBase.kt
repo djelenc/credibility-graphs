@@ -347,9 +347,9 @@ abstract class KnowledgeBase<Node, Edge>(val graph: Graph<Node, CredibilityObjec
      * @param edgeLabels include label in edges
      * @throws ExportException
      */
-    fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean = true) {
+    fun exportDOT(fileName: String, format: Format, edgeLabels: Boolean = true, nodePrefix: String = "") {
         val exporter = DOTExporter<Node, CredibilityObject<Node, Edge>>(
-                ComponentNameProvider<Node> { it.toString() }, null,
+                ComponentNameProvider<Node> { nodePrefix + it.toString() }, null,
                 if (edgeLabels) ComponentNameProvider<CredibilityObject<Node, Edge>> { it.reporter.toString() } else null)
 
         val stream = ByteArrayOutputStream()
